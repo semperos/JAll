@@ -1,0 +1,45 @@
+package com.example;
+
+import java.util.ArrayList;
+
+public class Hello {
+    private String name = "";
+    private static final ArrayList<String> names = new ArrayList<String>();
+
+    public Hello(String name) {
+        this.name = name;
+        this.names.add("John");
+        this.names.add("Sally");
+        this.names.add("Susan");
+        this.names.add("Robert");
+    }
+
+    public void sayHello() {
+        System.out.println("Hello, " + this.name);
+    }
+
+    public void sayHelloToEveryone() {
+        !def clj_say-hello-to-everyone : void (arr-of-names : java.util.List<java.lang.String>) {{
+            (doseq [n arr-of-names]
+              (println (str "Hello, " n)))
+        }}
+        !clj_say-hello-to-everyone(names);
+    }
+
+    public void sayHelloToEveryoneLoudly() {
+        !def clj_say-hello-to-everyone-loudly:void(arr-of-names : java.util.List<java.lang.String>, punctuation : String) {{
+            (let [names (map #(.toUpperCase %) arr-of-names)]
+              (doseq [n names]
+                (println (str "Hello, " n punctuation))))
+        }}
+        !clj_say-hello-to-everyone-loudly(names, "!!!");
+    }
+
+    public static void main(String[] args) {
+        ArrayList<String> ns = new ArrayList<String>();
+        ns.add("Steve");
+        ns.add("Bob");
+        ns.add("Frasier");
+        !clj_say-hello-to-everyone-loudly(ns, "!!!!!");
+    }
+}
