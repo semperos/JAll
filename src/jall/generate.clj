@@ -25,22 +25,31 @@
 
 (defn output-file
   "Intermediate fn for output-ajvm-files for dispatching on value of lang"
-  [full-class-name lang methods]
-  (let [right-methods (filter (fn [state item] (= (:lang item) lang)) methods)]
+  [full-class-name lang imports methods]
+  (println "OUTPUT FILE LANG")
+  (println lang)
+  (println "IMPORTS")
+  (println imports)
+  (println "IMPORTS FOR LANG")
+  (println (filter (fn [item] (= (:lang item) lang)) imports))
+  (let [right-methods (filter (fn [item] (= (:lang item) lang)) methods)
+        right-imports (filter (fn [item] (= (:lang item) lang)) imports)]
     (case lang
       :clj (init-file :clj
                       full-class-name
-                      (clj/output-clj-file full-class-name methods)))))
+                      ;; there should only be on !import statement per language per file
+                      (clj/output-file full-class-name (first right-imports) right-methods)))))
 
 (defn output-ajvm-files
   "Given all the method definitions found in the JAll source document, call the appropriate function for transforming method def's for each language"
-  [full-class-name methods]
+  [full-class-name imports methods]
+  ;; all-langs based on method definitions, so unused imports aren't included per-language
   (let [all-langs (reduce (fn [state item]
                             (conj state (:lang item)))
                           #{}
                           methods)]
     (for [lang all-langs]
-      (output-file full-class-name lang methods))))
+      (output-file full-class-name lang imports methods))))
 
 (defn output-support-for-clj-file
   [full-class-name methods]

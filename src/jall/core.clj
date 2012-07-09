@@ -167,8 +167,9 @@
   (let [package (p/java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)
+        imports (p/blocks-as-imports (p/imports parse-tree))
         methods (p/blocks-as-methods (p/blocks parse-tree))]
-    (gen/output-ajvm-files full-class-name methods)))
+    (gen/output-ajvm-files full-class-name imports methods)))
 
 (defn reproduce-java-file
   [source-file parse-tree langs]

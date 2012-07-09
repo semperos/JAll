@@ -1,6 +1,9 @@
 package com.example;
 
 import java.util.ArrayList;
+!import clj{{
+  (:require [clojure.string :as string])
+}}
 
 public class Hello {
     private String name = "";
@@ -28,7 +31,7 @@ public class Hello {
 
     public void sayHelloToEveryoneLoudly() {
         !def clj_say-hello-to-everyone-loudly:void(arr-of-names : java.util.List<java.lang.String>, punctuation : String) {{
-            (let [names (map #(.toUpperCase %) arr-of-names)]
+            (let [names (map #(string/upper-case %) arr-of-names)]
               (doseq [n names]
                 (println (str "Hello, " n punctuation))))
         }}

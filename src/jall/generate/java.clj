@@ -6,7 +6,9 @@
   "Return a seq of pairs, representing the starting and ending index (exclusive) that should be commented out."
   [file-content]
   (let [;; can't seem to get a proper negative lookahead working across lines here
-        matches (re-seq #"(?s)!def.*?\}\}" file-content)]
+        import-matches (re-seq #"(?s)!import.*?\}\}" file-content)
+        def-matches (re-seq #"(?s)!def.*?\}\}" file-content)
+        matches (concat import-matches def-matches)]
     (for [match matches]
       (let [idx-match (.indexOf file-content match)]
         [idx-match
@@ -40,7 +42,7 @@
 (defn replace-method-calls
   "Find calls like `!clj_my-method-here(foo)` and replace them with the correct Java.
 
-   This should probably be handled using things we actually parse out, so we're not parsing all over the place in different ways."
+   TODO: This should probably be handled using things we actually parse out, so we're not parsing all over the place in different ways."
   [file-content full-class-name]
   (let [method-sigs (re-seq #"(?s)!(clj|rb|sc)_([^\(]+)\(" file-content)]
     (reduce (fn [state [whole lang method-name]]

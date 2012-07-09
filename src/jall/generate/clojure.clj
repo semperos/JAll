@@ -27,10 +27,15 @@
         ))
 
 (defn clj-ns
-  [full-class-name methods]
-  (let [klass (symbol full-class-name)]
-    (list 'ns klass
-          (clj-gen-class klass methods))))
+  [full-class-name import methods]
+  (let [klass (symbol full-class-name)
+        import-code (read-string (:body import))]
+    (if import-code
+      (list 'ns klass
+            import-code
+            (clj-gen-class klass methods))
+      (list 'ns klass
+            (clj-gen-class klass methods)))))
 
 (defn clj-defn
   [{:keys [name args body]}]
@@ -40,17 +45,17 @@
         (read-string body)))
 
 (defn clj-file
-  [full-class-name methods]
-  (let [starting-state [(clj-ns full-class-name methods)]]
+  [full-class-name import methods]
+  (let [starting-state [(clj-ns full-class-name import methods)]]
     (reduce (fn [state method]
               (conj state (clj-defn method))) starting-state methods)))
 
 ;; Writing to a file should be separate from this generation process
 ;; [_ dirs file-name] (re-find #"(.*?)\.([^\.]+)$" full-class-name)
 ;; dirs (string/split dirs #".")
-(defn output-clj-file
-  [full-class-name methods]
-  (let [pieces (clj-file full-class-name methods)]
+(defn output-file
+  [full-class-name import methods]
+  (let [pieces (clj-file full-class-name import methods)]
     (string/join "\n"
                  (for [piece pieces]
                    (str (with-out-str (pprint piece)))))))
