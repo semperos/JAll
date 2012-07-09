@@ -77,7 +77,7 @@
       (p/edit 0 0 input)
       p/parse-tree))
 
-(defn code-java-package
+(defn java-package
   "Pull out the package of the file being parsed, used to create AJVM classes"
   [root-node]
   (let [content (:content root-node)
@@ -86,37 +86,37 @@
         :content
         second)))
 
-(defn code-blocks
+(defn blocks
   "Given root parse-tree node, return all code blocks"
   [root-node]
   (let [contents (:content root-node)]
     (filter (fn [node] (= (:tag node) :code-block)) contents)))
 
-(defn code-block-lang
+(defn block-lang
   "Return keyword for language code of given code block, e.g., `:clj`"
   [node]
   (let [content (:content node)
         lang-node (first (filter #(= (:tag %) :lang) content))]
     (keyword (second (re-find #"([^_]+)_$" (-> lang-node :content first))))))
 
-(defn code-block-method-name
+(defn block-method-name
   "Return name of method for code block"
   [node]
   (let [content (:content node)
         def-name-node (first (filter #(= (:tag %) :def-name) content))]
     (-> def-name-node :content first)))
 
-(defn code-block-method-args
+(defn block-method-args
   "Get the args for the code block's method"
   [node]
   (let [content (:content node)
         args-node (first (filter #(= (:tag %) :def-args) content))]
     (apply sorted-map (map #(-> % :content first) (u/clean-syntactic-cruft args-node)))))
 
-(defn code-block-return-type
+(defn block-return-type
   "Get the return type for the block method"
   [node]
-  (let [lang (code-block-lang node)
+  (let [lang (block-lang node)
         content (:content node)
         return-type-node (first (filter #(= (:tag %) :def-return-type) content))
         return-type (-> (u/clean-syntactic-cruft return-type-node)
@@ -125,7 +125,7 @@
                         first)]
     return-type))
 
-(defn code-block-body
+(defn block-body
   "Extract all the code inside the method def for a given code block, which we keep track of by not parsing it at all :-)"
   [node]
   {:pre [(= (:tag (last (:content node))) :close-block)]}
@@ -133,12 +133,12 @@
         ajvm-codes (filter #(= (:tag %) :net.cgrand.parsley/unexpected) content)]
     (apply str (map #(-> % :content first) ajvm-codes))))
 
-(defn code-blocks-as-methods
+(defn blocks-as-methods
   "Given all code block nodes from a given parse tree, create the appropriate `Method` records."
   [blocks]
   (for [block blocks]
-    (init-method (code-block-lang block)
-                 (code-block-method-name block)
-                 (code-block-method-args block)
-                 (code-block-return-type block)
-                 (code-block-body block))))
+    (init-method (block-lang block)
+                 (block-method-name block)
+                 (block-method-args block)
+                 (block-return-type block)
+                 (block-body block))))

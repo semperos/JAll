@@ -156,23 +156,23 @@
 
 (defn produce-java-support-files
   [source-file parse-tree langs]
-  (let [package (p/code-java-package parse-tree)
+  (let [package (p/java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)
-        methods (p/code-blocks-as-methods (p/code-blocks parse-tree))]
+        methods (p/blocks-as-methods (p/blocks parse-tree))]
     (gen/output-java-support-files full-class-name methods)))
 
 (defn produce-ajvm-files
   [source-file parse-tree]
-  (let [package (p/code-java-package parse-tree)
+  (let [package (p/java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)
-        methods (p/code-blocks-as-methods (p/code-blocks parse-tree))]
+        methods (p/blocks-as-methods (p/blocks parse-tree))]
     (gen/output-ajvm-files full-class-name methods)))
 
 (defn reproduce-java-file
   [source-file parse-tree langs]
-  (let [package (p/code-java-package parse-tree)
+  (let [package (p/java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)]
    (gen/output-java-file full-class-name langs source-file)))
