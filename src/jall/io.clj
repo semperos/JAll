@@ -45,12 +45,21 @@
       (concat ["target" "src" "support" lang-folder] dirs-for-package)
       (concat ["target" "src" "main" lang-folder] dirs-for-package))))
 
+(defn prepare-file
+  [project-root file-record]
+  (let [dir-path (string/join "/" (concat [project-root] (necessary-src-dirs file-record)))]
+    (fs/mkdirs dir-path)
+    dir-path))
+
+(defn write-file
+  [dir-path file-record]
+  (let [file (file-name file-record)
+        full-path (string/join "/" [dir-path file])]
+    (with-open [w (io/writer full-path)]
+      (.write w (:content file-record)))))
+
 (defn prepare-and-write-file
   "Prepare directory structure and write final file based on `File` record"
   [project-root file-record]
-  (let [dir-path (string/join "/" (concat [project-root] (necessary-src-dirs file-record)))
-        file (file-name file-record)
-        full-path (string/join "/" [dir-path file])]
-    (fs/mkdirs dir-path)
-    (with-open [w (io/writer full-path)]
-      (.write w (:content file-record)))))
+  (let [dir-path (prepare-file project-root file-record)]
+    (write-file dir-path file-record)))

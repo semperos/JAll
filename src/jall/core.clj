@@ -145,23 +145,14 @@
 ;;  * Allow users to write pluggable transformation functions for converting to-and-from Java and the AJVM, including parameters and return values, at the barrier where AJVM snippets are called (This would be especially useful for Java objects that need a custom "serialization/deserialization" to and from the AJVM. Though of course all AJVM's provide mechanisms for easily manipulating Java objects directly, it would be more intuitive to transform them to more amenable data structures if heavy manipulation is required.).
 ;;
 ;; Work in progress.
-;;     
+;;
 (ns jall.core
   (:use clojure.pprint)
   (:require [jall.parser :as p]
             [jall.util :as u]
             [jall.generate :as gen]
             [jall.io :as jall-io]
-            [clojure.java.io :as io]
             [fs.core :as fs]))
-
-(defn produce-ajvm-files
-  [source-file parse-tree]
-  (let [package (p/code-java-package parse-tree)
-        class-name (u/class-name-from-file source-file)
-        full-class-name (str package "." class-name)
-        methods (p/code-blocks-as-methods (p/code-blocks parse-tree))]
-    (gen/output-ajvm-files full-class-name methods)))
 
 (defn produce-java-support-files
   [source-file parse-tree langs]
@@ -171,26 +162,27 @@
         methods (p/code-blocks-as-methods (p/code-blocks parse-tree))]
     (gen/output-java-support-files full-class-name methods)))
 
-(defn produce-java-file
+(defn produce-ajvm-files
+  [source-file parse-tree]
+  (let [package (p/code-java-package parse-tree)
+        class-name (u/class-name-from-file source-file)
+        full-class-name (str package "." class-name)
+        methods (p/code-blocks-as-methods (p/code-blocks parse-tree))]
+    (gen/output-ajvm-files full-class-name methods)))
+
+(defn reproduce-java-file
   [source-file parse-tree langs]
   (let [package (p/code-java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)]
    (gen/output-java-file full-class-name langs source-file)))
 
-(defn write-file
-  "Given a `File` record, write the file to the file system.
-
-   A `File` record contains the language, full class name and content of a given file, which should be everything needed to create the necessary directory structure and write the final file."
-  [file-record]
-  (jall-io/prepare-and-write-file file-record))
-
 (def test-project-root "/Users/semperos/dev/java/foo")
 (def test-sample-src "resources/Hello.jall")
 (def test-pom "resources/jall_pom.xml")
 
 (defn -main
-  "Parse a JAll file, generate the appropriate AJVM and Java file output."
+  "Parse a JAll file, generate the appropriate supporting Java and AJVM code, and write to the file system."
   []
   (let [project-root test-project-root
         sample-src test-sample-src
@@ -200,26 +192,30 @@
                                                        sample-tree
                                                        (map (fn [file-record]
                                                               (:lang file-record)) ajvm-files))
-        java-file  (produce-java-file sample-src
-                                      sample-tree
-                                      (map (fn [file-record]
-                                             (:lang file-record)) ajvm-files))]
-    (println "\n ----> AJVM Files <----\n")
-    (doseq [file ajvm-files]
-      (print (:content file)))
+        java-file  (reproduce-java-file sample-src
+                                        sample-tree
+                                        (map (fn [file-record]
+                                               (:lang file-record)) ajvm-files))]
+    (println "\n ----> CODE GENERATED <----\n")
+
     (println "\n ----> Java Support Interfaces <----\n")
     (doseq [file java-support-files]
       (print (:content file)))
+    (println "\n ----> AJVM Files <----\n")
+    (doseq [file ajvm-files]
+      (print (:content file)))
     (println "\n ----> Java File <----\n")
     (print (:content java-file))
-    (println "\n ----> TIME TO WRITE IT OUT <----")
-    (println "\n ----> Writing AJVM Files <----")
-    (doseq [file ajvm-files]
-      (jall-io/prepare-and-write-file project-root file))
-    (println "\n ----> Writing Java Support Interfaces <----\n")
+    
+    (println "\n ----> WRITING OUT <----")
+    
+    (println "----> Writing Java Support Interfaces <----")
     (doseq [file java-support-files]
       (jall-io/prepare-and-write-file project-root file))
-    (println "\n ----> Writing Final Java File <----")
+    (println "----> Writing AJVM Files <----")
+    (doseq [file ajvm-files]
+      (jall-io/prepare-and-write-file project-root file))
+    (println "----> Writing Final Java File <----")
     (jall-io/prepare-and-write-file project-root java-file)
-    (println "\n ----> Write POM File <----")
+    (println "----> Writing Working POM File <----")
     (fs/copy test-pom (clojure.string/join "/" [project-root "pom.xml"]))))

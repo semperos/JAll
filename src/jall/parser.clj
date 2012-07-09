@@ -51,6 +51,8 @@
                           :comma- #",\s*"
                           :arg-type- [:clj-symbol #"\s*:\s*" :class-name]
                           :clj-symbol #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
+                          ;; Currently hard-coded to only handle generics two-deep, e.g., `List<List<String>>`
+                          ;; Feel like this is similar to clj-arg-list and children...
                           :class-name #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*")]
     jall-parser))
 
@@ -68,6 +70,12 @@
     (-> (u/pbuffer-from-file parser file-name)
         p/parse-tree
         u/remove-top-unexpected)))
+
+(defn adhoc-parse
+  [parser input]
+  (-> (p/incremental-buffer parser)
+      (p/edit 0 0 input)
+      p/parse-tree))
 
 (defn code-java-package
   "Pull out the package of the file being parsed, used to create AJVM classes"
