@@ -148,170 +148,32 @@
 ;;     
 (ns jall.core
   (:use clojure.pprint)
-  (:require [net.cgrand.parsley :as p]
-            [net.cgrand.parsley.views :as v]
-            [net.cgrand.parsley.tree :as t]
+  (:require [jall.parser :as p]
             [jall.util :as u]
             [jall.generate :as gen]
             [jall.io :as jall-io]
             [clojure.java.io :as io]
             [fs.core :as fs]))
 
-(defrecord Method [lang name args return-type body])
-
-(defn init-method
-  "Initialize a new `Method` record"
-  ([] (init-method nil nil nil nil nil))
-  ([lang] (init-method lang nil nil nil nil))
-  ([lang name] (init-method lang name nil nil nil))
-  ([lang name args] (init-method lang name args nil nil))
-  ([lang name args return-type] (init-method lang name args return-type nil))
-  ([lang name args return-type body] (Method. lang name args return-type body)))
-
-;; Main parser
-(def jall-parser (p/parser {:main :expr*
-                     ;; :space :ws?
-                     :root-tag :root}
-                ;; :ws #"\s+"
-                :expr- #{:java-package :code-block}
-                :java-package [:keywd-package #"[^;]+" #";?"]
-                :keywd-package- #"^\s*package\s+"
-                
-                :code-block [:open-block :close-block]
-                :open-block- [:def-prelude :open-brackets]
-                :open-brackets #"(?m)\{\{\s*$"
-                :close-block #"(?m)^\s*\}\}"
-
-                :def-prelude- [:keywd-def :lang :def-name :def-return-type :def-args]
-                :keywd-def #"!def\s+"
-                :lang #{:clj-abbr :jruby-abbr :scala-abbr}
-                :clj-abbr- "clj_"
-                :jruby-abbr- "rb_"
-                :scala-abbr- "sc_"
-                :def-name #{:clj-def-name}
-                :clj-def-name- #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
-                
-                :def-return-type [#"\s*:\s*" :java-type #"\s*"]
-                :java-type #"[A-Za-z]+[a-zA-Z0-9_\.]*"
-                
-                :def-args #{:clj-arg-list}
-
-                :clj-arg-list- [:lparen :arg-type-list :rparen]
-                :lparen- #"\(\s*"
-                :rparen- #"\)\s*"
-                :arg-type-list- #{:arg-type [:arg-type-list :comma :arg-type]}
-                :comma- #",\s*"
-                :arg-type- [:clj-symbol #"\s*:\s*" :class-name]
-                :clj-symbol #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
-                :class-name #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*"))
-
-(defn loose-parse
-  "Parse, leave mess"
-  [parser file-name]
-  (-> (u/pbuffer-from-file parser file-name)
-      p/parse-tree))
-
-(defn strict-parse
-  "Parse and remove unexpected top-level things"
-  [parser file-name]
-  (-> (u/pbuffer-from-file parser file-name)
-      p/parse-tree
-      u/remove-top-unexpected))
-
-(defn lang-type-legend
-  "Mapping of types between Java and other JVM languages. This is really just for things like void, null, nil, etc."
-  [lang java-type]
-  (let [lang-legend {:clj {"void" "nil"}}
-        entry (get-in lang-legend [lang java-type])]
-    (if (nil? entry)
-      java-type
-      entry)))
-
-(defn code-java-package
-  "Pull out the package of the file being parsed, used to create AJVM classes"
-  [root-node]
-  (let [content (:content root-node)
-        java-package-node (first (filter #(= (:tag %) :java-package) content))]
-    (-> java-package-node
-        :content
-        second)))
-
-(defn code-blocks
-  "Given root parse-tree node, return all code blocks"
-  [root-node]
-  (let [contents (:content root-node)]
-    (filter (fn [node] (= (:tag node) :code-block)) contents)))
-
-(defn code-block-lang
-  "Return keyword for language code of given code block, e.g., `:clj`"
-  [node]
-  (let [content (:content node)
-        lang-node (first (filter #(= (:tag %) :lang) content))]
-    (keyword (second (re-find #"([^_]+)_$" (-> lang-node :content first))))))
-
-(defn code-block-method-name
-  "Return name of method for code block"
-  [node]
-  (let [content (:content node)
-        def-name-node (first (filter #(= (:tag %) :def-name) content))]
-    (-> def-name-node :content first)))
-
-(defn code-block-method-args
-  "Get the args for the code block's method"
-  [node]
-  (let [content (:content node)
-        args-node (first (filter #(= (:tag %) :def-args) content))]
-    (apply sorted-map (map #(-> % :content first) (u/clean-syntactic-cruft args-node)))))
-
-(defn code-block-return-type
-  "Get the return type for the block method"
-  [node]
-  (let [lang (code-block-lang node)
-        content (:content node)
-        return-type-node (first (filter #(= (:tag %) :def-return-type) content))
-        return-type (-> (u/clean-syntactic-cruft return-type-node)
-                        first
-                        :content
-                        first)]
-    return-type))
-
-(defn code-block-body
-  "Extract all the code inside the method def for a given code block, which we keep track of by not parsing it at all :-)"
-  [node]
-  {:pre [(= (:tag (last (:content node))) :close-block)]}
-  (let [content (:content node)
-        ajvm-codes (filter #(= (:tag %) :net.cgrand.parsley/unexpected) content)]
-    (apply str (map #(-> % :content first) ajvm-codes))))
-
-(defn code-blocks-as-methods
-  "Given all code block nodes from a given parse tree, create the appropriate `Method` records."
-  [blocks]
-  (for [block blocks]
-    (init-method (code-block-lang block)
-                 (code-block-method-name block)
-                 (code-block-method-args block)
-                 (code-block-return-type block)
-                 (code-block-body block))))
-
 (defn produce-ajvm-files
   [source-file parse-tree]
-  (let [package (code-java-package parse-tree)
+  (let [package (p/code-java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)
-        methods (code-blocks-as-methods (code-blocks parse-tree))]
+        methods (p/code-blocks-as-methods (p/code-blocks parse-tree))]
     (gen/output-ajvm-files full-class-name methods)))
 
 (defn produce-java-support-files
   [source-file parse-tree langs]
-  (let [package (code-java-package parse-tree)
+  (let [package (p/code-java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)
-        methods (code-blocks-as-methods (code-blocks parse-tree))]
+        methods (p/code-blocks-as-methods (p/code-blocks parse-tree))]
     (gen/output-java-support-files full-class-name methods)))
 
 (defn produce-java-file
   [source-file parse-tree langs]
-  (let [package (code-java-package parse-tree)
+  (let [package (p/code-java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)]
    (gen/output-java-file full-class-name langs source-file)))
@@ -323,26 +185,16 @@
   [file-record]
   (jall-io/prepare-and-write-file file-record))
 
-;;
-;; TODO
-;; We have to generate a separate Java interface for all the methods we define
-;; in Clojure, so that they can have the proper Generics, etc.
-;;
-;; Generated Java is already going to target/src/main/java/..., so we will put
-;; these interfaces directly into the regular src/main/java/... folder.
-;;
-;; In long run, may want to reverse this, so that folks have to specify a special
-;; JAll Maven profile to do the initial compilation, but can then interact with
-;; the generated Java in src/main/java as they usually would.
-;;
-;; Pretty sure that previous paragraph isn't possible; time to sleep :)
-;;
+(def test-project-root "/Users/semperos/dev/java/foo")
+(def test-sample-src "resources/Hello.jall")
+(def test-pom "resources/jall_pom.xml")
+
 (defn -main
   "Parse a JAll file, generate the appropriate AJVM and Java file output."
   []
-  (let [project-root "/Users/semperos/dev/java/foo"
-        sample-src "resources/Hello.jall"
-        sample-tree (strict-parse jall-parser sample-src)
+  (let [project-root test-project-root
+        sample-src test-sample-src
+        sample-tree (p/strict-parse sample-src)
         ajvm-files (produce-ajvm-files sample-src sample-tree)
         java-support-files (produce-java-support-files sample-src
                                                        sample-tree
@@ -370,4 +222,4 @@
     (println "\n ----> Writing Final Java File <----")
     (jall-io/prepare-and-write-file project-root java-file)
     (println "\n ----> Write POM File <----")
-    (fs/copy "resources/jall_pom.xml" (clojure.string/join "/" [project-root "pom.xml"]))))
+    (fs/copy test-pom (clojure.string/join "/" [project-root "pom.xml"]))))
