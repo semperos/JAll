@@ -7,9 +7,12 @@
   "Things at top of file"
   [import]
   (let [starting-code ["# encoding: utf-8"
+                       "require 'rubygems'" ;; consider Bundler at some point
                        "require 'java'\n"]]
     (if import
-      (conj starting-code import)
+      (-> starting-code
+          (conj (string/trim (:body import)))
+          (conj "\n"))
       starting-code)))
 
 (defn rb-class-start

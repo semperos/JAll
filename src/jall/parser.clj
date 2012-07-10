@@ -30,6 +30,7 @@
         java-type #"[A-Za-z]+[a-zA-Z0-9_\.]*"
         lparen #"\(\s*"
         rparen #"\)\s*"
+        empty-parens "()"
         comma #",\s*"
         colon #"\s*:\s*"
         open-brackets #"(?m)\{\{\s*$"
@@ -96,7 +97,7 @@
                    
                    :lparen- lparen
                    :rparen- rparen
-                   :arg-type-list- #{:arg-type [:arg-type-list :comma :arg-type]}
+                   :arg-type-list- #{"" :arg-type [:arg-type-list :comma :arg-type]}
                    :comma- comma
                    :arg-type- [:identifier :colon :class-name]
                    :colon- colon

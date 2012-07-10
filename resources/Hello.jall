@@ -4,6 +4,9 @@ import java.util.ArrayList;
 !import_clj{{
   (:require [clojure.string :as string])
 }}
+!import_rb{{
+  require 'nokogiri'
+}}
 
 public class Hello {
     private String name = "";
@@ -49,6 +52,20 @@ public class Hello {
         !clj_say-hello-to-everyone-loudly(names, "!!!");
     }
 
+    !def_rb widget_xml : void () {{
+        builder = Nokogiri::XML::Builder.new do |xml|
+        xml.root {
+          xml.products {
+            xml.widget {
+              xml.id_ "awesome-widget-1"
+              xml.name "Awesome widget"
+            }
+          }
+        }
+        end
+        puts builder.to_xml
+    }}
+
     public static void main(String[] args) {
         ArrayList<String> ns = new ArrayList<String>();
         ns.add("Steve");
@@ -57,5 +74,7 @@ public class Hello {
         !clj_say-hello-to-everyone-loudly(ns, "!!!!!");
         Integer x = !rb_square_nums(9);
         System.out.println("Your number is " + x);
+        System.out.println("Widget XML here we come...");
+        !rb_widget_xml();
     }
 }
