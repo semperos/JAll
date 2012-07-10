@@ -22,9 +22,9 @@
     @common-tree))
 
 ;; ### Parser Basics ###
-(expect IllegalArgumentException (parser :rb)) ;; todo
-(expect IllegalArgumentException (parser :sc)) ;; todo
+(expect IllegalArgumentException (parser :scala)) ;; todo
 (expect fn? (parser :clj)) ;; that's right
+(expect fn? (parser :rb)) ;; JRuby too
 
 ;; ### Parsing in Parts ###
 

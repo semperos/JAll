@@ -1,7 +1,7 @@
 package com.example;
 
 import java.util.ArrayList;
-!import clj{{
+!import_clj{{
   (:require [clojure.string :as string])
 }}
 
@@ -17,12 +17,23 @@ public class Hello {
         this.names.add("Robert");
     }
 
-    public void sayHello() {
-        System.out.println("Hello, " + this.name);
+    public Integer addNumbers(Integer x, Integer y) {
+        !def_rb add_nums : Integer (x : Integer, y : Integer) {{
+            x + y
+        }}
+        return !rb_add_nums(x, y);
+    }
+
+    public Integer squareThenDivideByTwo(Integer x) {
+        !def_ruby square_nums : Integer (x : Integer) {{
+            x * x
+        }}
+        Integer aSquare = !rb_square_nums(x);
+        return aSquare / 2;
     }
 
     public void sayHelloToEveryone() {
-        !def clj_say-hello-to-everyone : void (arr-of-names : java.util.List<java.lang.String>) {{
+        !def_clj say-hello-to-everyone : void (arr-of-names : java.util.List<java.lang.String>) {{
             (doseq [n arr-of-names]
               (println (str "Hello, " n)))
         }}
@@ -30,7 +41,7 @@ public class Hello {
     }
 
     public void sayHelloToEveryoneLoudly() {
-        !def clj_say-hello-to-everyone-loudly:void(arr-of-names : java.util.List<java.lang.String>, punctuation : String) {{
+        !def_clojure say-hello-to-everyone-loudly:void(arr-of-names : java.util.List<java.lang.String>, punctuation : String) {{
             (let [names (map #(string/upper-case %) arr-of-names)]
               (doseq [n names]
                 (println (str "Hello, " n punctuation))))

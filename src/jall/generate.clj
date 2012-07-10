@@ -9,6 +9,7 @@
             [fs.core :as fs]
             [jall.util :as u]
             [jall.generate.clojure :as clj]
+            [jall.generate.jruby :as rb]
             [jall.generate.java :as j]
             [jall.generate.java-support :as support])
   (:import [java.util.regex Matcher Pattern]))
@@ -27,12 +28,15 @@
   "Intermediate fn for output-ajvm-files for dispatching on value of lang"
   [full-class-name lang imports methods]
   (let [right-methods (filter (fn [item] (= (:lang item) lang)) methods)
-        right-imports (filter (fn [item] (= (:lang item) lang)) imports)]
+        right-import (first (filter (fn [item] (= (:lang item) lang)) imports))]
     (case lang
       :clj (init-file :clj
                       full-class-name
                       ;; there should only be on !import statement per language per file
-                      (clj/output-file full-class-name (first right-imports) right-methods)))))
+                      (clj/output-file full-class-name right-import right-methods))
+      :rb (init-file :rb
+                     full-class-name
+                     (rb/output-file full-class-name right-import right-methods)))))
 
 (defn output-ajvm-files
   "Given all the method definitions found in the JAll source document, call the appropriate function for transforming method def's for each language"
@@ -53,20 +57,23 @@
 (defn output-java-support-file
   "Intermediate fn for output-java-support-files for dispatching on value of lang"
   [full-class-name lang methods]
-  (let [right-methods (filter (fn [state item] (= (:lang item) lang)) methods)]
+  (let [right-methods (filter (fn [item] (= (:lang item) lang)) methods)]
     (case lang
       :clj (init-file :java
                       (u/translate-interface-name :clj full-class-name)
-                      (output-support-for-clj-file full-class-name methods)
+                      (output-support-for-clj-file full-class-name right-methods)
                       true ;; support-interface?
                       ))))
 
 (defn output-java-support-files
   [full-class-name methods]
-  (let [all-langs (reduce (fn [state item]
-                            (conj state (:lang item)))
-                          #{}
-                          methods)]
+  (let [;; all-langs (reduce (fn [state item]
+        ;;                     (conj state (:lang item)))
+        ;;                   #{}
+        ;;                   methods)
+        ;;
+        ;; Between Clojure and JRuby, only Clojure seems to *need* a Java Interface
+        all-langs [:clj] ]
     (for [lang all-langs]
       (output-java-support-file full-class-name lang methods))))
 

@@ -43,9 +43,16 @@
 (defn dashes-to-camel-case
   [s]
   (reduce (fn [state item]
-             (.replaceAll state item (.toUpperCase (apply str (rest item)))))
+             (.replaceAll state item (string/upper-case (apply str (rest item)))))
            s
            (re-seq #"-[^-]" s)))
+
+(defn snake-case-to-camel-case
+  [s]
+  (reduce (fn [state item]
+            (.replaceAll state item (string/upper-case (apply str (rest item)))))
+          s
+          (re-seq #"_[^_]" s)))
 
 (defn clj-to-java
   "Dashes to CamelCase, illegal things replaced"
@@ -55,6 +62,25 @@
       (.replaceAll "_BANG" "!")
       (.replaceAll "_QMARK" "?")
       (.replaceAll "_STAR" "*")))
+
+(defn java-method-args-str
+  [method-args]
+  (apply str (flatten
+              (interpose ", "
+                         (for [[k v] method-args]
+                           ;; key is the argument name
+                           ;; value is the type of the arg
+                           [v " " (clj-to-java k)])))))
+
+(defn package-from-class-name
+  [full-class-name]
+  (let [parts (string/split full-class-name #"\.")]
+    (string/join "." (butlast parts))))
+
+(defn class-from-class-name
+  [full-class-name]
+  (let [parts (string/split full-class-name #"\.")]
+    (last parts)))
 
 (defn translate-class-name
   "AJVM classes have a suffix appended to make things easier to recognize in generated Java code."
@@ -78,10 +104,22 @@
   "Given a target language and method name, generate the Java class/method that would result"
   [lang method-name]
   (case (keyword lang)
-    :clj (dashes-to-camel-case method-name)))
+    :clj (dashes-to-camel-case method-name)
+    :rb (snake-case-to-camel-case method-name)))
 
 (defn clean-syntactic-cruft
   "Remove things from the content of a Parsley node that are not maps (i.e. matched only a regex or string in a parser, and not a rule as a whole)"
   [node]
   (let [args (:content node)]
     (filter (fn [arg] (map? arg)) args)))
+
+(defn lang-legend
+  "Return canonical (internal) name for a given language, defaulting to `:java`"
+  [s]
+  (case (keyword s)
+    :clj :clj
+    :clojure :clj
+    :rb :rb
+    :ruby :rb
+    :jruby :rb
+    :java))

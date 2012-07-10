@@ -12,19 +12,10 @@
   (let [interface-name (last (string/split (u/translate-interface-name lang full-class-name) #"\."))]
     (format "public interface %s {" interface-name)))
 
-(defn java-method-args-str
-  [method-args]
-  (apply str (flatten
-              (interpose ", "
-                         (for [[k v] method-args]
-                           ;; key is the argument name
-                           ;; value is the type of the arg
-                           [v " " (u/clj-to-java k)])))))
-
 (defn java-interface-methods
   [methods]
   (for [{:keys [name args return-type]} methods]
-    (format "%s %s(%s);" return-type (u/clj-to-java name) (java-method-args-str args))))
+    (format "%s %s(%s);" return-type (u/clj-to-java name) (u/java-method-args-str args))))
 
 (defn java-interface-close
   []

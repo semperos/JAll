@@ -1,7 +1,8 @@
 (ns jall.parser
   (:use [clojure.pprint :only [pprint]])
   (:require [net.cgrand.parsley :as p]
-            [jall.util :as u]))
+            [jall.util :as u]
+            [clojure.string :as string]))
 
 (defrecord Method [lang name args return-type body])
 
@@ -27,8 +28,6 @@
   [lang]
   (let [class-name #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*"
         java-type #"[A-Za-z]+[a-zA-Z0-9_\.]*"
-        keywd-import #"!import\s+"
-        keywd-def #"!def\s+"
         lparen #"\(\s*"
         rparen #"\)\s*"
         comma #",\s*"
@@ -38,51 +37,87 @@
       (case lang
         :common (p/parser {:main :expr*
                            :root-tag :root}
-                          :expr- #{:java-package}
-                          :java-package [:keywd-package #"[^;]+" #";?"]
-                          :keywd-package- #"^\s*package\s+")
+                      :expr- #{:java-package}
+                      :java-package [:keywd-package #"[^;]+" #";?"]
+                      :keywd-package- #"^\s*package\s+")
         :clj (p/parser {:main :expr*
                         ;; :space :ws?
                         :root-tag :root}
                        ;; :ws #"\s+"
-                       :expr- #{:import-block :code-block}
-                       :import-block [:keywd-import :lang :open-brackets :close-brackets]
-                       :keywd-import keywd-import
-                       :lang "clj"
-                       :open-brackets open-brackets
-                       :close-brackets close-brackets
-               
-                       :code-block [:open-block :close-brackets]
-                       :open-block- [:def-prelude :open-brackets]
-               
-                       :def-prelude- [:keywd-def :lang-prefix :def-name :def-return-type :def-args]
-                       :keywd-def keywd-def
-                       :lang-prefix ["clj" "_"]
-               
-                       :def-name #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
-                       ;; :jruby-def-name- #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
-               
-                       :def-return-type [#"\s*:\s*" :class-name #"\s*"]
-                       :class-name class-name
-               
-                       :def-args [:lparen :arg-type-list :rparen]
-               
-                       :lparen- lparen
-                       :rparen- rparen
-                       :arg-type-list- #{:arg-type [:arg-type-list :comma :arg-type]}
-                       :comma- comma
-                       :arg-type- [:clj-symbol :colon :class-name]
-                       :colon- colon
-                       :clj-symbol #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
-                       ;; Currently hard-coded to only handle generics two-deep, e.g., `List<List<String>>`
-                       ;; Feel like this is similar to clj-arg-list and children...
-                ))))
+                   :expr- #{:import-block :code-block}
+                   :import-block [:keywd-import :open-brackets :close-brackets]
+                   :keywd-import #"!import_(?:clj|clojure)"
+                   :open-brackets open-brackets
+                   :close-brackets close-brackets
+                   
+                   :code-block [:open-block :close-brackets]
+                   :open-block- [:def-prelude :open-brackets]
+                   
+                   :def-prelude- [:keywd-def :def-name :def-return-type :def-args]
+                   :keywd-def #"!def_(?:clj|clojure)\s+"
+                   
+                   :def-name #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
+                   
+                   :def-return-type [#"\s*:\s*" :class-name #"\s*"]
+                   :class-name class-name
+                   
+                   :def-args [:lparen :arg-type-list :rparen]
+                   
+                   :lparen- lparen
+                   :rparen- rparen
+                   :arg-type-list- #{:arg-type [:arg-type-list :comma :arg-type]}
+                   :comma- comma
+                   :arg-type- [:identifier :colon :class-name]
+                   :colon- colon
+                   :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
+                   ;; Currently hard-coded to only handle generics two-deep, e.g., `List<List<String>>`
+                   ;; Feel like this is similar to clj-arg-list and children...
+                   )
+        :rb (p/parser {:main :expr*
+                       :root-tag :root}
+                   :expr- #{:import-block :code-block}
+                   :import-block [:keywd-import :open-brackets :close-brackets]
+                   :keywd-import #"!import_(?:rb|ruby|jruby)"
+                   :open-brackets open-brackets
+                   :close-brackets close-brackets
+                   
+                   :code-block [:open-block :close-brackets]
+                   :open-block- [:def-prelude :open-brackets]
+                   
+                   :def-prelude- [:keywd-def :def-name :def-return-type :def-args]
+                   :keywd-def #"!def_(?:rb|ruby|jruby)\s+"
+                   
+                   :def-name #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
+                   
+                   :def-return-type [#"\s*:\s*" :class-name #"\s*"]
+                   :class-name class-name
+                     
+                   :def-args [:lparen :arg-type-list :rparen]
+                   
+                   :lparen- lparen
+                   :rparen- rparen
+                   :arg-type-list- #{:arg-type [:arg-type-list :comma :arg-type]}
+                   :comma- comma
+                   :arg-type- [:identifier :colon :class-name]
+                   :colon- colon
+                   :identifier #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
+                   ;; Currently hard-coded to only handle generics two-deep, e.g., `List<List<String>>`
+                   ;; Feel like this is similar to clj-arg-list and children...
+                   ))))
 
 (defn loose-parse
   "Parse, leave mess"
   [lang file-name]
   (let [parser (parser (keyword lang))]
     (-> (u/pbuffer-from-file parser file-name)
+        p/parse-tree)))
+
+(defn loose-parse-str
+  "Parse and remove unexpected top-level things from a given input string"
+  [lang input]
+  (let [parser (parser (keyword lang))]
+    (-> (p/incremental-buffer parser)
+        (p/edit 0 0 input)
         p/parse-tree)))
 
 (defn strict-parse
@@ -108,7 +143,7 @@
       (p/edit 0 0 input)
       p/parse-tree))
 
-(defn tend-trees
+(defn combine-parse-trees
   "Given a `common-tree` parsing of the common parser and all other trees, merge 'em"
   [common-tree & trees]
   (reduce (fn [state tree]
@@ -134,8 +169,9 @@
 (defn import-lang
   [import-node]
   (let [contents (:content import-node)
-        lang-node (first (filter (fn [node] (= (:tag node) :lang)) contents))]
-    (keyword (first (:content lang-node)))))
+        keywd-node (first (filter (fn [node] (= (:tag node) :keywd-import)) contents))]
+    (u/lang-legend (string/trim (second
+                                 (re-find #"_([^_]+)$" (first (:content keywd-node))))))))
 
 (defn import-body
   [import-node]
@@ -153,8 +189,12 @@
 (defn blocks
   "Given root parse-tree node, return all code blocks"
   [root-node]
-  (let [contents (:content root-node)]
-    (filter (fn [node] (= (:tag node) :code-block)) contents)))
+  (let [contents (:content root-node)
+        all-blocks (filter (fn [node] (= (:tag node) :code-block)) contents)]
+    (remove (fn [block]
+              (= (:tag (second (:content block)))
+                 :net.cgrand.parsley/unexpected))
+            all-blocks)))
 
 (defn block-lang
   "Return keyword for language code of given code block, e.g., `:clj`
@@ -162,8 +202,9 @@
    In order to make the parser unambiguous, we have to hard-code a language-specific path at some point. This is that point, which is why the below code looks ugly."
   [node]
   (let [content (:content node)
-        lang-node (first (filter (fn [node] (= (:tag node) :lang-prefix)) content))]
-    (keyword (-> lang-node :content first))))
+        keywd-node (first (filter (fn [node] (= (:tag node) :keywd-def)) content))]
+    (u/lang-legend (string/trim (second
+                                 (re-find #"_([^_]+)$" (first (:content keywd-node))))))))
 
 (defn block-method-name
   "Return name of method for code block"

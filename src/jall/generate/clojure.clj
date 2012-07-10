@@ -10,7 +10,6 @@
   [methods]
   (vec ;; because I like everything in vectors
    (for [{:keys [name args return-type]} methods]
-     ;; only supporting static methods for now
      (let [genericless-args (into {} (for [[k v] args]
                                        [k (second (re-find #"([^<]+)<?" v))]))]
        [(symbol (u/translate-method-name :clj name)) (vec (map symbol (vals genericless-args))) (symbol return-type)]))))

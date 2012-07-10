@@ -189,7 +189,8 @@
         sample-src test-sample-src
         common-tree (p/strict-parse :common sample-src)
         clj-tree (p/strict-parse :clj sample-src)
-        sample-tree (p/tend-trees common-tree clj-tree)
+        rb-tree (p/strict-parse :rb sample-src)
+        sample-tree (p/combine-parse-trees common-tree clj-tree rb-tree)
         ajvm-files (produce-ajvm-files sample-src sample-tree)
         java-support-files (produce-java-support-files sample-src
                                                        sample-tree
