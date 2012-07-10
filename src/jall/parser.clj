@@ -23,71 +23,80 @@
 
 ;; Main parser
 (defn parser
-  "Wrap parser in a fn"
-  []
-  (let [jall-parser (p/parser {:main :expr*
-                           ;; :space :ws?
+  "Return parser for given lang"
+  [lang]
+  (let [class-name #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*"
+        java-type #"[A-Za-z]+[a-zA-Z0-9_\.]*"
+        keywd-import #"!import\s+"
+        keywd-def #"!def\s+"
+        lparen #"\(\s*"
+        rparen #"\)\s*"
+        comma #",\s*"
+        colon #"\s*:\s*"
+        open-brackets #"(?m)\{\{\s*$"
+        close-brackets #"(?m)^\s*\}\}"]
+      (case lang
+        :common (p/parser {:main :expr*
                            :root-tag :root}
-                          ;; :ws #"\s+"
-                          :expr- #{:java-package :import-block :code-block}
+                          :expr- #{:java-package}
                           :java-package [:keywd-package #"[^;]+" #";?"]
-                          :keywd-package- #"^\s*package\s+"
-
-                          :import-block [:keywd-import :lang :open-brackets :close-brackets]
-                          :keywd-import #"!import\s+"
-                          :lang #{:clj-abbr :jruby-abbr :scala-abbr}
-                          :clj-abbr- "clj"
-                          :jruby-abbr- "rb"
-                          :scala-abbr- "sc"
-                          :open-brackets #"(?m)\{\{\s*$"
-                          :close-brackets #"(?m)^\s*\}\}"
-                
-                          :code-block [:open-block :close-brackets]
-                          :open-block- [:def-prelude :open-brackets]
-
-                          :def-prelude- [:keywd-def :lang-prefix :def-name :def-return-type :def-args]
-                          :keywd-def #"!def\s+"
-                          :lang-prefix #{[:clj-abbr "_"] [:jruby-abbr "_"] [:scala-abbr "_"]}
-
-                          :def-name #{:clj-def-name}
-                          :clj-def-name- #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
-                
-                          :def-return-type [#"\s*:\s*" :java-type #"\s*"]
-                          :java-type #"[A-Za-z]+[a-zA-Z0-9_\.]*"
-                
-                          :def-args #{:clj-arg-list}
-
-                          :clj-arg-list- [:lparen :arg-type-list :rparen]
-                          :lparen- #"\(\s*"
-                          :rparen- #"\)\s*"
-                          :arg-type-list- #{:arg-type [:arg-type-list :comma :arg-type]}
-                          :comma- #",\s*"
-                          :arg-type- [:clj-symbol #"\s*:\s*" :class-name]
-                          :clj-symbol #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
-                          ;; Currently hard-coded to only handle generics two-deep, e.g., `List<List<String>>`
-                          ;; Feel like this is similar to clj-arg-list and children...
-                          :class-name #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*")]
-    jall-parser))
+                          :keywd-package- #"^\s*package\s+")
+        :clj (p/parser {:main :expr*
+                        ;; :space :ws?
+                        :root-tag :root}
+                       ;; :ws #"\s+"
+                       :expr- #{:import-block :code-block}
+                       :import-block [:keywd-import :lang :open-brackets :close-brackets]
+                       :keywd-import keywd-import
+                       :lang "clj"
+                       :open-brackets open-brackets
+                       :close-brackets close-brackets
+               
+                       :code-block [:open-block :close-brackets]
+                       :open-block- [:def-prelude :open-brackets]
+               
+                       :def-prelude- [:keywd-def :lang-prefix :def-name :def-return-type :def-args]
+                       :keywd-def keywd-def
+                       :lang-prefix ["clj" "_"]
+               
+                       :def-name #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
+                       ;; :jruby-def-name- #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
+               
+                       :def-return-type [#"\s*:\s*" :class-name #"\s*"]
+                       :class-name class-name
+               
+                       :def-args [:lparen :arg-type-list :rparen]
+               
+                       :lparen- lparen
+                       :rparen- rparen
+                       :arg-type-list- #{:arg-type [:arg-type-list :comma :arg-type]}
+                       :comma- comma
+                       :arg-type- [:clj-symbol :colon :class-name]
+                       :colon- colon
+                       :clj-symbol #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
+                       ;; Currently hard-coded to only handle generics two-deep, e.g., `List<List<String>>`
+                       ;; Feel like this is similar to clj-arg-list and children...
+                ))))
 
 (defn loose-parse
   "Parse, leave mess"
-  [file-name]
-  (let [parser (parser)]
+  [lang file-name]
+  (let [parser (parser (keyword lang))]
     (-> (u/pbuffer-from-file parser file-name)
         p/parse-tree)))
 
 (defn strict-parse
-  "Parse and remove unexpected top-level things"
-  [file-name]
-  (let [parser (parser)]
+  "Parse and remove unexpected top-level things for the given AJVM `lang`"
+  [lang file-name]
+  (let [parser (parser (keyword lang))]
     (-> (u/pbuffer-from-file parser file-name)
         p/parse-tree
         u/remove-top-unexpected)))
 
 (defn strict-parse-str
   "Parse and remove unexpected top-level things from a given input string"
-  [input]
-  (let [parser (parser)]
+  [lang input]
+  (let [parser (parser (keyword lang))]
     (-> (p/incremental-buffer parser)
         (p/edit 0 0 input)
         p/parse-tree
@@ -98,6 +107,14 @@
   (-> (p/incremental-buffer parser)
       (p/edit 0 0 input)
       p/parse-tree))
+
+(defn tend-trees
+  "Given a `common-tree` parsing of the common parser and all other trees, merge 'em"
+  [common-tree & trees]
+  (reduce (fn [state tree]
+            (update-in state [:content] concat (:content tree)))
+          common-tree
+          trees))
 
 (defn java-package
   "Pull out the package of the file being parsed, used to create AJVM classes"
@@ -118,7 +135,7 @@
   [import-node]
   (let [contents (:content import-node)
         lang-node (first (filter (fn [node] (= (:tag node) :lang)) contents))]
-    (first (:content lang-node))))
+    (keyword (first (:content lang-node)))))
 
 (defn import-body
   [import-node]
@@ -130,7 +147,7 @@
   "Create `Import` records out of :import-block blocks"
   [imports]
   (for [import imports]
-    (init-import (keyword (import-lang import))
+    (init-import (import-lang import)
                  (import-body import))))
 
 (defn blocks
@@ -140,10 +157,12 @@
     (filter (fn [node] (= (:tag node) :code-block)) contents)))
 
 (defn block-lang
-  "Return keyword for language code of given code block, e.g., `:clj`"
+  "Return keyword for language code of given code block, e.g., `:clj`
+
+   In order to make the parser unambiguous, we have to hard-code a language-specific path at some point. This is that point, which is why the below code looks ugly."
   [node]
   (let [content (:content node)
-        lang-node (first (filter #(= (:tag %) :lang-prefix) content))]
+        lang-node (first (filter (fn [node] (= (:tag node) :lang-prefix)) content))]
     (keyword (-> lang-node :content first))))
 
 (defn block-method-name

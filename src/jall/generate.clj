@@ -26,12 +26,6 @@
 (defn output-file
   "Intermediate fn for output-ajvm-files for dispatching on value of lang"
   [full-class-name lang imports methods]
-  (println "OUTPUT FILE LANG")
-  (println lang)
-  (println "IMPORTS")
-  (println imports)
-  (println "IMPORTS FOR LANG")
-  (println (filter (fn [item] (= (:lang item) lang)) imports))
   (let [right-methods (filter (fn [item] (= (:lang item) lang)) methods)
         right-imports (filter (fn [item] (= (:lang item) lang)) imports)]
     (case lang
