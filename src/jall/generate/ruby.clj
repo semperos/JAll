@@ -1,4 +1,4 @@
-(ns jall.generate.jruby
+(ns jall.generate.ruby
   (:use [clojure.pprint :only [pprint]])
   (:require [jall.util :as u]
             [clojure.string :as string]))
@@ -26,9 +26,9 @@
      (let [args-str (apply str (interpose "," (keys args)))]
        [(format "  java_signature '%s %s(%s)'"
                 return-type
-                (u/clj-to-java name)
+                (u/snake-case-to-camel-case name)
                 (u/java-method-args-str args))
-        (format "  def %s(%s)" name args-str)
+        (format "  def %s(%s)" (u/snake-case-to-camel-case name) args-str)
         (format "    %s" (string/trim body))
         "  end\n"]))))
 

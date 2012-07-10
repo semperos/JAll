@@ -9,7 +9,7 @@
             [fs.core :as fs]
             [jall.util :as u]
             [jall.generate.clojure :as clj]
-            [jall.generate.jruby :as rb]
+            [jall.generate.ruby :as rb]
             [jall.generate.java :as j]
             [jall.generate.java-support :as support])
   (:import [java.util.regex Matcher Pattern]))

@@ -55,5 +55,7 @@ public class Hello {
         ns.add("Bob");
         ns.add("Frasier");
         !clj_say-hello-to-everyone-loudly(ns, "!!!!!");
+        Integer x = !rb_square_nums(9);
+        System.out.println("Your number is " + x);
     }
 }

@@ -42,18 +42,57 @@
                             <goal>run</goal>
                         </goals>
                     </execution>
+                    <!-- Because it's easier this way -->
                     <execution>
-                        <id>compile-renewed-java-files</id>
-                        <phase>${javaCompilePhase}</phase>
-                        <configuration>
-                            <tasks>
-                                <mkdir dir="${project.build.outputDirectory}"/>
-                                <javac srcdir="${javaSourceDir}" destdir="${project.build.outputDirectory}"/>
-                            </tasks>
-                        </configuration>
+                      <id>compile-ruby-files</id>
+                      <phase>${rubyCompilePhase}</phase>
+                      <configuration>
+                        <tasks>
+                          <mkdir dir="${project.build.outputDirectory}"/>
+                          <exec executable="jrubyc">
+                            <arg value="--target"/>
+                            <arg value="target/classes"/>
+                            <arg value="--javac"/>
+                            <arg value="target/src/main/ruby"/>
+                            <arg value="--verbose"/>
+                          </exec>
+                        </tasks>
+                      </configuration>
+                      <goals>
+                          <goal>run</goal>
+                      </goals>
+                    </execution>
+                    <!-- <execution> -->
+                    <!--     <id>compile-renewed-java-files</id> -->
+                    <!--     <phase>${javaCompilePhase}</phase> -->
+                    <!--     <configuration> -->
+                    <!--         <tasks> -->
+                    <!--             <mkdir dir="${project.build.outputDirectory}"/> -->
+                    <!--             <javac srcdir="${javaSourceDir}" destdir="${project.build.outputDirectory}"/> -->
+                    <!--         </tasks> -->
+                    <!--     </configuration> -->
+                    <!--     <goals> -->
+                    <!--         <goal>run</goal> -->
+                    <!--     </goals> -->
+                    <!-- </execution> -->
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
                         <goals>
-                            <goal>run</goal>
+                            <goal>add-source</goal>
                         </goals>
+                        <configuration>
+                            <sources>
+                                <source>${javaSourceDir}</source>
+                            </sources>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -101,6 +140,11 @@
             <groupId>org.clojure</groupId>
             <artifactId>clojure</artifactId>
             <version>1.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jruby</groupId>
+            <artifactId>jruby-complete</artifactId>
+            <version>1.6.7</version>
         </dependency>
     </dependencies>
 </project>
