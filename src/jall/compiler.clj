@@ -63,20 +63,15 @@
 (defn write-jall-output
   "Write output of JAll compilation to appropriate paths beneath the given `project-root`"
   [project-root java-support-files ajvm-files java-file]
-  (let [working-pom (->> "resources/jall_pom.xml"
-                         (.getResource (clojure.lang.RT/baseLoader))
-                         io/file
-                         str)]
-    (log/debug "----> Writing Java Support Interfaces <----")
-    (doseq [file java-support-files]
-      (jall-io/prepare-and-write-file project-root file))
-    (log/debug "----> Writing AJVM Files <----")
-    (doseq [file ajvm-files]
-      (jall-io/prepare-and-write-file project-root file))
-    (log/debug "----> Writing Final Java File <----")
-    (jall-io/prepare-and-write-file project-root java-file)
-    (log/debug "----> Writing Working POM File <----")
-    (fs/copy working-pom (clojure.string/join "/" [project-root "pom.xml"]))))
+  (log/debug "----> Writing Java Support Interfaces <----")
+  (doseq [file java-support-files]
+    (jall-io/prepare-and-write-file project-root file))
+  (log/debug "----> Writing AJVM Files <----")
+  (doseq [file ajvm-files]
+    (jall-io/prepare-and-write-file project-root file))
+  (log/debug "----> Writing Final Java File <----")
+  (jall-io/prepare-and-write-file project-root java-file)
+  (log/debug "----> Writing Working POM File <----"))
 
 (defn compile-file
   "Given the name of a file, compile it with JAll.
