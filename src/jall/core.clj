@@ -159,8 +159,8 @@
   (:gen-class
    :main true
    :name jall.core.Compiler
-   :methods [^{:static true} [compile-src-file [String] void]
-             ^{:static true} [compile-src-dir  [String] void]]))
+   :methods [^{:static true} [compileSrcFile [String] void]
+             ^{:static true} [compileSrcDir  [String] void]]))
 
 (defn produce-java-support-files
   "Clojure has to implement a Java interface in order for its interop functions to agree with Java generics. Generate these Java interface files as needed for the given `source-file`"
