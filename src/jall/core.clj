@@ -147,14 +147,23 @@
 ;; Work in progress.
 ;;
 (ns jall.core
-  (:use clojure.pprint)
+  (:use clojure.pprint
+        [clojure.tools.cli :only [cli]])
   (:require [jall.parser :as p]
             [jall.util :as u]
             [jall.generate :as gen]
             [jall.io :as jall-io]
-            [fs.core :as fs]))
+            [clojure.java.io :as io]
+            [clojure.tools.logging :as log]
+            [fs.core :as fs])
+  (:gen-class
+   :main true
+   :name jall.core.Compiler
+   :methods [^{:static true} [compile-src-file [String] void]
+             ^{:static true} [compile-src-dir  [String] void]]))
 
 (defn produce-java-support-files
+  "Clojure has to implement a Java interface in order for its interop functions to agree with Java generics. Generate these Java interface files as needed for the given `source-file`"
   [source-file parse-tree langs]
   (let [package (p/java-package parse-tree)
         class-name (u/class-name-from-file source-file)
@@ -163,6 +172,7 @@
     (gen/output-java-support-files full-class-name methods)))
 
 (defn produce-ajvm-files
+  "Return `File` records for all AJVM files that need to be produced for the given `source-file` of JAll code"
   [source-file parse-tree]
   (let [package (p/java-package parse-tree)
         class-name (u/class-name-from-file source-file)
@@ -172,54 +182,111 @@
     (gen/output-ajvm-files full-class-name imports methods)))
 
 (defn reproduce-java-file
+  "Transform JAll snippets in original source, returning a `File` record representing the new Java source code transformed"
   [source-file parse-tree langs]
   (let [package (p/java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)]
-   (gen/output-java-file full-class-name langs source-file)))
+    (gen/output-java-file full-class-name langs source-file)))
 
-(def test-project-root "/Users/semperos/dev/java/foo")
-(def test-sample-src "resources/Hello.jall")
-(def test-pom "resources/jall_pom.xml")
+(defn find-source-files
+  "Given a directory of source code, return all files that have the `.jall` extension"
+  [source-dir]
+  (filter (fn [f] (.endsWith (.getName f) ".jall"))
+          (file-seq (io/file source-dir))))
 
-(defn -main
-  "Parse a JAll file, generate the appropriate supporting Java and AJVM code, and write to the file system."
-  []
-  (let [project-root test-project-root
-        sample-src test-sample-src
-        common-tree (p/strict-parse :common sample-src)
-        clj-tree (p/strict-parse :clj sample-src)
-        rb-tree (p/strict-parse :rb sample-src)
-        sample-tree (p/combine-parse-trees common-tree clj-tree rb-tree)
-        ajvm-files (produce-ajvm-files sample-src sample-tree)
-        java-support-files (produce-java-support-files sample-src
-                                                       sample-tree
+(defn jall-parse-tree
+  "Given a source file, return the given Parsley parse tree"
+  [src-filename]
+  (let [common-tree   (p/strict-parse :common src-filename)
+        clj-tree      (p/strict-parse :clj src-filename)
+        rb-tree       (p/strict-parse :rb src-filename)]
+    (p/combine-parse-trees common-tree clj-tree rb-tree)))
+
+(defn print-jall-output
+  "Simply print the output of JAll compilation to `*out*`"
+  [java-support-files ajvm-files java-file]
+  (log/info "\n ----> Java Support Interfaces <----\n")
+  (doseq [file java-support-files]
+    (print (:content file)))
+  (log/info "\n ----> AJVM Files <----\n")
+  (doseq [file ajvm-files]
+    (print (:content file)))
+  (log/info "\n ----> Java File <----\n")
+  (print (:content java-file)))
+
+(defn write-jall-output
+  "Write output of JAll compilation to appropriate paths beneath the given `project-root`"
+  [project-root java-support-files ajvm-files java-file]
+  (let [working-pom "resources/jall_pom.xml"]
+    (log/debug "----> Writing Java Support Interfaces <----")
+    (doseq [file java-support-files]
+      (jall-io/prepare-and-write-file project-root file))
+    (log/debug "----> Writing AJVM Files <----")
+    (doseq [file ajvm-files]
+      (jall-io/prepare-and-write-file project-root file))
+    (log/debug "----> Writing Final Java File <----")
+    (jall-io/prepare-and-write-file project-root java-file)
+    (log/debug "----> Writing Working POM File <----")
+    (fs/copy working-pom (clojure.string/join "/" [project-root "pom.xml"]))))
+
+(defn compile-file
+  "Given the name of a file, compile it with JAll.
+
+   Return a vector of the three things generated from JAll compilation: Java support files (interfaces), AJVM auto-generated source, and the original Java (JAll) file with JAll snippets transformed."
+  [src-filename]
+  (let [parse-tree    (jall-parse-tree src-filename)
+        ajvm-files    (produce-ajvm-files src-filename parse-tree)
+        java-support-files (produce-java-support-files src-filename
+                                                       parse-tree
                                                        (map (fn [file-record]
                                                               (:lang file-record)) ajvm-files))
-        java-file  (reproduce-java-file sample-src
-                                        sample-tree
-                                        (map (fn [file-record]
-                                               (:lang file-record)) ajvm-files))]
-    (println "\n ----> CODE GENERATED <----\n")
+        java-file     (reproduce-java-file src-filename
+                                           parse-tree
+                                           (map (fn [file-record]
+                                                  (:lang file-record)) ajvm-files))]
+    [java-support-files ajvm-files java-file]))
 
-    (println "\n ----> Java Support Interfaces <----\n")
-    (doseq [file java-support-files]
-      (print (:content file)))
-    (println "\n ----> AJVM Files <----\n")
-    (doseq [file ajvm-files]
-      (print (:content file)))
-    (println "\n ----> Java File <----\n")
-    (print (:content java-file))
-    
-    (println "\n ----> WRITING OUT <----")
-    
-    (println "----> Writing Java Support Interfaces <----")
-    (doseq [file java-support-files]
-      (jall-io/prepare-and-write-file project-root file))
-    (println "----> Writing AJVM Files <----")
-    (doseq [file ajvm-files]
-      (jall-io/prepare-and-write-file project-root file))
-    (println "----> Writing Final Java File <----")
-    (jall-io/prepare-and-write-file project-root java-file)
-    (println "----> Writing Working POM File <----")
-    (fs/copy test-pom (clojure.string/join "/" [project-root "pom.xml"]))))
+(defn compile-and-emit
+  ([root-dir src-filename] (compile-and-emit root-dir src-filename false))
+  ([root-dir src-filename dry-run?]
+     (let [[java-support-files ajvm-files java-file] (compile-file src-filename)]
+       (if dry-run?
+         (print-jall-output java-support-files
+                            ajvm-files
+                            java-file)
+         (write-jall-output root-dir
+                            java-support-files
+                            ajvm-files
+                            java-file)))))
+
+(defn -compile-src-file
+  "Java-facing method for compiling a single JAll file"
+  [source-filename]
+  (compile-and-emit source-filename false))
+
+(defn -compile-src-dir
+  "Java-facing method for compiling all JAll source files in a given `source-dir`"
+  [source-dir]
+  (let [sources (find-source-files source-dir)]
+    (doseq [src sources]
+      (compile-and-emit src false))))
+
+(defn -main
+  "Parse JAll files and process."
+  [& args]
+  (let [[options args banner] (cli args
+                                   ["-s" "--source-dir" "Source directory" :default "src/main/jall"]
+                                   ["-t" "--root-dir" "Root of project" :default "."]
+                                   ["-p" "--support-dir" "Destination for auto-generated Java support files" :default "target/src/support/java"]
+                                   ["-c" "--clojure-dir" "Destination for auto-generated Clojure files" :default "target/src/main/clojure"]
+                                   ["-r" "--ruby-dir" "Destination for auto-generated Ruby files" :default "target/src/main/ruby"]
+                                   ["-l" "--scala-dir" "Destination for auto-generated Scala files" :default "target/src/main/scala"]
+                                   ["-d" "--dry-run" "Parse files and print what would be written to disk to STDOUT" :default false :flag true]
+                                   ["-h" "--help" "Show help" :default false :flag true])]
+    (when (:help options)
+      (println banner)
+      (System/exit 0))
+    (let [src-files     (find-source-files (:source-dir options))]
+      (doseq [src src-files]
+        (compile-file src (:dry-run options))))))

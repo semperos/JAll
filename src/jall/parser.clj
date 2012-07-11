@@ -34,7 +34,10 @@
         comma #",\s*"
         colon #"\s*:\s*"
         open-brackets #"(?m)\{\{\s*$"
-        close-brackets #"(?m)^\s*\}\}"]
+        close-brackets #"(?m)^\s*\}\}"
+        def-args [:lparen :arg-type-list :rparen]
+        arg-type-list #{"" :arg-type [:arg-type-list :comma :arg-type]}
+        arg-type [:identifier :colon :class-name]]
       (case lang
         :common (p/parser {:main :expr*
                            :root-tag :root}
@@ -42,9 +45,7 @@
                       :java-package [:keywd-package #"[^;]+" #";?"]
                       :keywd-package- #"^\s*package\s+")
         :clj (p/parser {:main :expr*
-                        ;; :space :ws?
                         :root-tag :root}
-                       ;; :ws #"\s+"
                    :expr- #{:import-block :code-block}
                    :import-block [:keywd-import :open-brackets :close-brackets]
                    :keywd-import #"!import_(?:clj|clojure)"
@@ -62,18 +63,15 @@
                    :def-return-type [#"\s*:\s*" :class-name #"\s*"]
                    :class-name class-name
                    
-                   :def-args [:lparen :arg-type-list :rparen]
+                   :def-args def-args
                    
                    :lparen- lparen
                    :rparen- rparen
-                   :arg-type-list- #{:arg-type [:arg-type-list :comma :arg-type]}
+                   :arg-type-list- arg-type-list
                    :comma- comma
-                   :arg-type- [:identifier :colon :class-name]
+                   :arg-type- arg-type
                    :colon- colon
-                   :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
-                   ;; Currently hard-coded to only handle generics two-deep, e.g., `List<List<String>>`
-                   ;; Feel like this is similar to clj-arg-list and children...
-                   )
+                   :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*")
         :rb (p/parser {:main :expr*
                        :root-tag :root}
                    :expr- #{:import-block :code-block}
@@ -93,18 +91,15 @@
                    :def-return-type [#"\s*:\s*" :class-name #"\s*"]
                    :class-name class-name
                      
-                   :def-args [:lparen :arg-type-list :rparen]
+                   :def-args def-args
                    
                    :lparen- lparen
                    :rparen- rparen
-                   :arg-type-list- #{"" :arg-type [:arg-type-list :comma :arg-type]}
+                   :arg-type-list- arg-type-list
                    :comma- comma
-                   :arg-type- [:identifier :colon :class-name]
+                   :arg-type- arg-type
                    :colon- colon
-                   :identifier #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
-                   ;; Currently hard-coded to only handle generics two-deep, e.g., `List<List<String>>`
-                   ;; Feel like this is similar to clj-arg-list and children...
-                   ))))
+                   :identifier #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"))))
 
 (defn loose-parse
   "Parse, leave mess"
