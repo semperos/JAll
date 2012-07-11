@@ -49,3 +49,9 @@
 ;; (def mybuf-complete (u/append-to-buffer mybuf-unfinished mys-end))
 ;; (def mytree (myp (str mys-begin mys-end)))
 
+
+;; (fs/copy working-pom (clojure.string/join "/" [project-root "pom.xml"]))
+  ;; let working-pom (->> "resources/jall_pom.xml"
+  ;;                      (.getResource (clojure.lang.RT/baseLoader))
+  ;;                      io/file
+  ;;                      str)
