@@ -2,12 +2,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.example</groupId>
-    <artifactId>Hello</artifactId>
+    <groupId>com.semperos</groupId>
+    <artifactId>sample</artifactId>
     <version>0.1</version>
     <packaging>jar</packaging>
 
-    <name>Hello World for JAll</name>
+    <name>Sample for JAll</name>
     <url>http://maven.apache.org</url>
 
     <properties>
@@ -127,7 +127,7 @@
                             <goal>java</goal>
                         </goals>
                         <configuration>
-                            <mainClass>com.example.Hello</mainClass>
+                            <mainClass>com.semperos.Sample</mainClass>
                         </configuration>
                     </execution>
                 </executions>
