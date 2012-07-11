@@ -63,7 +63,10 @@
 (defn write-jall-output
   "Write output of JAll compilation to appropriate paths beneath the given `project-root`"
   [project-root java-support-files ajvm-files java-file]
-  (let [working-pom "resources/jall_pom.xml"]
+  (let [working-pom (->> "resources/jall_pom.xml"
+                         (.getResource (clojure.lang.RT/baseLoader))
+                         io/file
+                         str)]
     (log/debug "----> Writing Java Support Interfaces <----")
     (doseq [file java-support-files]
       (jall-io/prepare-and-write-file project-root file))
@@ -111,6 +114,7 @@
      (let [[java-support-files ajvm-files java-file] (compile-file source-filename)]
        (emit root-dir java-support-files ajvm-files java-file dry-run?))))
 
+;; (process-src-dir "/Users/semperos/dev/java/foo" "/Users/semperos/dev/jall/sample/src/main/jall")
 (defn process-src-dir
   ([root-dir source-dir] (process-src-dir root-dir source-dir false))
   ([root-dir source-dir dry-run?]

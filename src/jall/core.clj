@@ -147,12 +147,10 @@
 ;; Work in progress.
 ;;
 (ns jall.core
-  (:use clojure.pprint
+  (:use [clojure.pprint :only [pprint]]
         [clojure.tools.cli :only [cli]])
   (:require [jall.compiler :as compiler])
   (:gen-class
-   :main true
-   :name jall.core.Compiler
    :methods [^{:static true} [processSrcFile [String String] void]
              ^{:static true} [processSrcDir  [String String] void]]))
 
@@ -167,7 +165,7 @@
   (compiler/process-src-dir root-dir source-dir))
 
 (defn -main
-  "Parse JAll files and process."
+  "Process JAll source files"
   [& args]
   (let [[options args banner] (cli args
                                    ["-s" "--source-dir" "Source directory" :default "src/main/jall"]
