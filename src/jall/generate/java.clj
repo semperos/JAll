@@ -47,13 +47,24 @@
   (let [method-sigs (re-seq #"(?s)!(clj|rb|sc)_([^\(]+)\(" file-content)]
     (reduce (fn [state [whole lang method-name]]
               (let [to-replace (str (apply str (butlast whole)) "\\(")]
-                (.replaceAll state to-replace
-                             (str
-                              "new "
-                              (u/translate-class-name lang full-class-name)
-                              "()."
-                              (u/translate-method-name lang method-name)
-                              "("))))
+                (if (.contains method-name ".")
+                  ;; if there's a dot, it means this is a fully-qualified reference to another class
+                  (let [other-class (second (re-find #"([^/]+)/" method-name))
+                        real-method-name (second (re-find #"/(.*)$" method-name))]
+                    (.replaceAll state to-replace
+                                 (str
+                                  "new "
+                                  (u/translate-class-name lang other-class)
+                                  "()."
+                                  (u/translate-method-name lang real-method-name)
+                                  "(")))
+                  (.replaceAll state to-replace
+                               (str
+                                "new "
+                                (u/translate-class-name lang full-class-name)
+                                "()."
+                                (u/translate-method-name lang method-name)
+                                "(")))))
             file-content
             method-sigs)))
 
