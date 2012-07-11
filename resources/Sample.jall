@@ -1,0 +1,59 @@
+package com.semperos;
+
+import java.util.List;
+import java.util.ArrayList;
+!import_clj{{
+  (:require [clojure.string :as string])
+}}
+!import_rb{{
+  require 'nokogiri'
+}}
+
+public class Sample {
+
+    public static void sayHelloToEveryoneLoudly(List<String> names, String punctuation) {
+        !def_clojure say-hello-to-everyone-loudly:void(arr-of-names : java.util.List<java.lang.String>, punctuation : String) {{
+            (let [names (map #(string/upper-case %) arr-of-names)]
+              (doseq [n names]
+                (println (str "Hello, " n punctuation))))
+        }}
+        !clj_say-hello-to-everyone-loudly(names, "!!!");
+    }
+
+    public static Integer squareThenDivideByTwo(Integer x) {
+        !def_ruby square_nums : Integer (x : Integer) {{
+            x * x
+        }}
+        Integer aSquare = !rb_square_nums(x);
+        return aSquare / 2;
+    }
+
+    !def_rb widget_xml : void () {{
+        builder = Nokogiri::XML::Builder.new do |xml|
+        xml.root {
+          xml.products {
+            xml.widget {
+              xml.id_ "awesome-widget-1"
+              xml.name "Awesome widget"
+            }
+          }
+        }
+        end
+        puts builder.to_xml
+    }}
+
+    public static void main(String[] args) {
+        ArrayList<String> ns = new ArrayList<String>();
+        ns.add("Martin");
+        ns.add("Niles");
+        ns.add("Frasier");
+
+        !clj_say-hello-to-everyone-loudly(ns, "!!!!!");
+
+        Integer x = squareThenDivideByTwo(9);
+        System.out.println("Your number is " + x);
+
+        System.out.println("Printing widget XML...");
+        !rb_widget_xml();
+    }
+}
