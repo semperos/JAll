@@ -2,16 +2,16 @@
 ;;
 ;; Coerce values each place they're needed.
 ;;
-(ns jall.generate
+(ns com.semperos.jall.generate
   (:use [clojure.pprint :only [pprint]])
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [fs.core :as fs]
-            [jall.util :as u]
-            [jall.generate.clojure :as clj]
-            [jall.generate.ruby :as rb]
-            [jall.generate.java :as j]
-            [jall.generate.java-support :as support])
+            [com.semperos.jall.util :as u]
+            [com.semperos.jall.generate.clojure :as clj]
+            [com.semperos.jall.generate.ruby :as rb]
+            [com.semperos.jall.generate.java :as j]
+            [com.semperos.jall.generate.java-support :as support])
   (:import [java.util.regex Matcher Pattern]))
 
 (defrecord File [lang class-name content support-file?])

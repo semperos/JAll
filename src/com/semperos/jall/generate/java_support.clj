@@ -1,6 +1,6 @@
-(ns jall.generate.java-support
+(ns com.semperos.jall.generate.java-support
   (:require [clojure.string :as string]
-            [jall.util :as u]))
+            [com.semperos.jall.util :as u]))
 
 (defn java-package
   [full-class-name]

@@ -1,6 +1,6 @@
-(ns jall.lang.Compiler
+(ns com.semperos.jall.lang.Compiler
   (:use [clojure.tools.cli :only [cli]])
-  (:require [jall.compiler :as compiler])
+  (:require [com.semperos.jall.compiler :as compiler])
   (:gen-class
    :methods [^{:static true} [processSrcFile [String String] void]
              ^{:static true} [processSrcDir  [String String] void]]))

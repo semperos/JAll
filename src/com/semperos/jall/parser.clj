@@ -1,7 +1,7 @@
-(ns jall.parser
+(ns com.semperos.jall.parser
   (:use [clojure.pprint :only [pprint]])
   (:require [net.cgrand.parsley :as p]
-            [jall.util :as u]
+            [com.semperos.jall.util :as u]
             [clojure.string :as string]))
 
 (defrecord Method [lang name args return-type body])

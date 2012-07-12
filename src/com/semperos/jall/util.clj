@@ -1,5 +1,5 @@
 ;; Crutches while I learn Parsley
-(ns jall.util
+(ns com.semperos.jall.util
   (:require [net.cgrand.parsley :as p]
             [net.cgrand.parsley.tree :as t]
             [fs.core :as fs]

@@ -1,6 +1,6 @@
-(ns jall.generate.ruby
+(ns com.semperos.jall.generate.ruby
   (:use [clojure.pprint :only [pprint]])
-  (:require [jall.util :as u]
+  (:require [com.semperos.jall.util :as u]
             [clojure.string :as string]))
 
 (defn rb-prelude

@@ -1,6 +1,6 @@
 ;; After things get parsed and generated, someone has to be responsible
 ;; for writing that mess to the file system.
-(ns jall.io
+(ns com.semperos.jall.io
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [fs.core :as fs]))

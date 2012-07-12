@@ -1,8 +1,8 @@
-(ns jall.compiler
-  (:require [jall.parser :as p]
-            [jall.util :as u]
-            [jall.generate :as gen]
-            [jall.io :as jall-io]
+(ns com.semperos.jall.compiler
+  (:require [com.semperos.jall.parser :as p]
+            [com.semperos.jall.util :as u]
+            [com.semperos.jall.generate :as gen]
+            [com.semperos.jall.io :as jall-io]
             [fs.core :as fs]
             [clojure.java.io :as io]
             [clojure.tools.logging :as log]))

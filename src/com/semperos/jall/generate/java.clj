@@ -1,5 +1,5 @@
-(ns jall.generate.java
-  (:require [jall.util :as u]
+(ns com.semperos.jall.generate.java
+  (:require [com.semperos.jall.util :as u]
             [clojure.string :as string]))
 
 (defn comment-out-positions

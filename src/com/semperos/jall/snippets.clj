@@ -1,5 +1,5 @@
 ;; Commented-out code we don't yet want to lose
-(ns jall.snippets)
+(ns com.semperos.jall.snippets)
 
                 ;; :clj-value #{:clj-number :clj-string}
                 ;; :clj-number #"[0-9]+"

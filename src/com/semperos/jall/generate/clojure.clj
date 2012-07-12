@@ -1,6 +1,6 @@
-(ns jall.generate.clojure
+(ns com.semperos.jall.generate.clojure
   (:use [clojure.pprint :only [pprint]])
-  (:require [jall.util :as u]
+  (:require [com.semperos.jall.util :as u]
             [clojure.string :as string]))
 
 (def clj-method-prefix "java-")
