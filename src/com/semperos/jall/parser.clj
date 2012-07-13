@@ -22,6 +22,13 @@
   ([lang] (init-import lang nil))
   ([lang body] (Import. lang body)))
 
+(defrecord Helper [lang body])
+
+(defn init-helper
+  ([] (init-helper nil nil))
+  ([lang] (init-helper lang nil))
+  ([lang body] (Helper. lang body)))
+
 ;; Main parser
 (defn parser
   "Return parser for given lang"
@@ -46,7 +53,7 @@
                       :keywd-package- #"^\s*package\s+")
         :clj (p/parser {:main :expr*
                         :root-tag :root}
-                   :expr- #{:import-block :code-block}
+                   :expr- #{:import-block :code-block :helper-block}
                    :import-block [:keywd-import :open-brackets :close-brackets]
                    :keywd-import #"!import_(?:clj|clojure)"
                    :open-brackets open-brackets
@@ -71,7 +78,10 @@
                    :comma- comma
                    :arg-type- arg-type
                    :colon- colon
-                   :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*")
+                   :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
+
+                   :helper-block [:keywd-helper :open-brackets :close-brackets]
+                   :keywd-helper #"!helpers?_(?:clj|clojure)")
         :rb (p/parser {:main :expr*
                        :root-tag :root}
                    :expr- #{:import-block :code-block}
@@ -181,6 +191,32 @@
   (for [import imports]
     (init-import (import-lang import)
                  (import-body import))))
+
+(defn helpers
+  "Specialized JAll helper for AJVM languages"
+  [root-node]
+  (let [contents (:content root-node)]
+    (filter (fn [node] (= (:tag node) :helper-block)) contents)))
+
+(defn helper-lang
+  [helper-node]
+  (let [contents (:content helper-node)
+        keywd-node (first (filter (fn [node] (= (:tag node) :keywd-helper)) contents))]
+    (u/lang-legend (string/trim (second
+                                 (re-find #"_([^_]+)$" (first (:content keywd-node))))))))
+
+(defn helper-body
+  [helper-node]
+  (let [contents (:content helper-node)
+        ajvm-codes (filter #(= (:tag %) :net.cgrand.parsley/unexpected) contents)]
+    (apply str (map #(-> % :content first) ajvm-codes))))
+
+(defn blocks-as-helpers
+  "Create `Helper` records out of :helper-block blocks"
+  [helpers]
+  (for [helper helpers]
+    (init-helper (helper-lang helper)
+                 (helper-body helper))))
 
 (defn blocks
   "Given root parse-tree node, return all code blocks"

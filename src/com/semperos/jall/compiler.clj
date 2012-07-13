@@ -23,8 +23,9 @@
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)
         imports (p/blocks-as-imports (p/imports parse-tree))
+        helpers (p/blocks-as-helpers (p/helpers parse-tree))
         methods (p/blocks-as-methods (p/blocks parse-tree))]
-    (gen/output-ajvm-files full-class-name imports methods)))
+    (gen/output-ajvm-files full-class-name imports helpers methods)))
 
 (defn reproduce-java-file
   "Transform JAll snippets in original source, returning a `File` record representing the new Java source code transformed"
@@ -109,7 +110,7 @@
      (let [[java-support-files ajvm-files java-file] (compile-file source-filename)]
        (emit root-dir java-support-files ajvm-files java-file dry-run?))))
 
-;; (process-src-dir "/Users/semperos/dev/java/foo" "/Users/semperos/dev/jall/sample/src/main/jall")
+;; (process-src-dir "/Users/semperos/dev/jall/sample" "/Users/semperos/dev/jall/sample/src/main/jall")
 (defn process-src-dir
   ([root-dir source-dir] (process-src-dir root-dir source-dir false))
   ([root-dir source-dir dry-run?]

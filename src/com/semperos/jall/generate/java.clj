@@ -7,8 +7,9 @@
   [file-content]
   (let [;; can't seem to get a proper negative lookahead working across lines here
         import-matches (re-seq #"(?s)!import.*?\}\}" file-content)
+        helper-matches (re-seq #"(?s)!helpers?.*?\}\}" file-content)
         def-matches (re-seq #"(?s)!def.*?\}\}" file-content)
-        matches (concat import-matches def-matches)]
+        matches (concat import-matches helper-matches def-matches)]
     (for [match matches]
       (let [idx-match (.indexOf file-content match)]
         [idx-match
