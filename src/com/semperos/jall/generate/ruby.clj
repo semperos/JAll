@@ -16,11 +16,19 @@
       starting-code)))
 
 (defn rb-class-start
-  [full-class-name methods]
+  [full-class-name]
   (let [package (u/package-from-class-name full-class-name)
         klass (str (u/class-from-class-name full-class-name) "Rb")]
     [(format "java_package '%s'" package)
      (format "class %s\n" klass)]))
+
+(defn rb-class-helpers
+  "Helpers represent non-Java-facing methods that can be used by official JAll methods. They can really be anything; they are simply Ruby source inserted at the top of the class definition before the regular JAll methods are added."
+  [helpers]
+  (flatten
+   (for [{:keys [body]} helpers]
+     [body
+      "\n"])))
 
 (defn rb-class-methods
   [methods]
@@ -40,16 +48,17 @@
   ["end\n"])
 
 (defn rb-file
-  [full-class-name import methods]
+  [full-class-name import helpers methods]
   (flatten
    (concat (rb-prelude import)
-           (rb-class-start full-class-name methods)
+           (rb-class-start full-class-name)
+           (rb-class-helpers helpers)
            (rb-class-methods methods)
            (rb-class-end))))
 
 (defn output-file
-  [full-class-name import methods]
-  (let [pieces (rb-file full-class-name import methods)]
+  [full-class-name import helpers methods]
+  (let [pieces (rb-file full-class-name import helpers methods)]
     (string/join "\n"
                  (for [piece pieces]
                    (str (with-out-str (print piece)))))))

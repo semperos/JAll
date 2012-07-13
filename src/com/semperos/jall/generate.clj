@@ -37,7 +37,7 @@
                       (clj/output-file full-class-name right-import right-helpers right-methods))
       :rb (init-file :rb
                      full-class-name
-                     (rb/output-file full-class-name right-import right-methods)))))
+                     (rb/output-file full-class-name right-import right-helpers right-methods)))))
 
 (defn output-ajvm-files
   "Given all the method definitions found in the JAll source document, call the appropriate function for transforming method def's for each language"

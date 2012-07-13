@@ -53,7 +53,7 @@
                       :keywd-package- #"^\s*package\s+")
         :clj (p/parser {:main :expr*
                         :root-tag :root}
-                   :expr- #{:import-block :code-block :helper-block}
+                   :expr- #{:import-block :helper-block :code-block}
                    :import-block [:keywd-import :open-brackets :close-brackets]
                    :keywd-import #"!import_(?:clj|clojure)"
                    :open-brackets open-brackets
@@ -84,7 +84,7 @@
                    :keywd-helper #"!helpers?_(?:clj|clojure)")
         :rb (p/parser {:main :expr*
                        :root-tag :root}
-                   :expr- #{:import-block :code-block}
+                   :expr- #{:import-block :helper-block :code-block}
                    :import-block [:keywd-import :open-brackets :close-brackets]
                    :keywd-import #"!import_(?:rb|ruby|jruby)"
                    :open-brackets open-brackets
@@ -109,7 +109,9 @@
                    :comma- comma
                    :arg-type- arg-type
                    :colon- colon
-                   :identifier #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"))))
+                   :identifier #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
+                   :helper-block [:keywd-helper :open-brackets :close-brackets]
+                   :keywd-helper #"!helpers?_(?:rb|ruby|jruby)"))))
 
 (defn loose-parse
   "Parse, leave mess"
