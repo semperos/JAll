@@ -27,14 +27,14 @@
 
 (defn clj-ns
   [full-class-name import methods]
-  (let [klass (symbol full-class-name)
+  (let [klass (symbol (u/translate-class-name :clj full-class-name))
         import-code (read-string (:body import))]
     (if import-code
       (list 'ns klass
             import-code
-            (clj-gen-class klass methods))
+            (clj-gen-class full-class-name methods))
       (list 'ns klass
-            (clj-gen-class klass methods)))))
+            (clj-gen-class full-class-name methods)))))
 
 (defn clj-defn
   [{:keys [name args body]}]

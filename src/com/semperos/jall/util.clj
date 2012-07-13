@@ -88,7 +88,8 @@
   (case (keyword lang)
     :clj (str full-class-name "Clj")
     :rb  (str full-class-name "Rb")
-    :sc  (str full-class-name "Sc")))
+    :sc  (str full-class-name "Sc")
+    full-class-name))
 
 (defn translate-interface-name
   "AJVM classes implement an auto-generated Java interface with the same methods to ensure typing."

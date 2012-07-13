@@ -3,7 +3,8 @@
 (ns com.semperos.jall.io
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
-            [fs.core :as fs]))
+            [fs.core :as fs]
+            [com.semperos.jall.util :as u]))
 
 (defn src-lang-folder
   "Mapping of lang to it's sub-folder under `src`, default to 'java' if nothing matches."
@@ -30,8 +31,9 @@
 (defn file-name
   "Given a `File` record, derive the correct name of the file plus its extension (path not included)"
   [file-record]
-  (let [ext (lang-extension (:lang file-record))
-        file (second (re-find #"\.([^\.]+)$" (:class-name file-record)))]
+  (let [lang (:lang file-record)
+        ext (lang-extension lang)
+        file (u/translate-class-name lang (second (re-find #"\.([^\.]+)$" (:class-name file-record))))]
     (str file ext)))
 
 (defn necessary-src-dirs
