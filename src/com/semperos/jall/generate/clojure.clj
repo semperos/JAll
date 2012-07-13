@@ -26,10 +26,10 @@
 (defn clj-ns
   [full-class-name import methods]
   (let [klass (symbol (u/translate-class-name :clj full-class-name))
-        import-code (read-string (:body import))]
-    (if import-code
+        import-body (:body import)]
+    (if import-body
       (list 'ns klass
-            import-code
+            (read-string import-body)
             (clj-gen-class full-class-name methods))
       (list 'ns klass
             (clj-gen-class full-class-name methods)))))
@@ -62,10 +62,8 @@
     (reduce (fn [state method]
               (concat state [(clj-defn method)])) state-with-helpers methods)))
 
-;; Writing to a file should be separate from this generation process
-;; [_ dirs file-name] (re-find #"(.*?)\.([^\.]+)$" full-class-name)
-;; dirs (string/split dirs #".")
 (defn output-file
+  "Output a string of the to-be file contents of the given Clojure source file."
   [full-class-name import helpers methods]
   (let [pieces (clj-file full-class-name import helpers methods)]
     (string/join "\n"
