@@ -106,7 +106,8 @@
   [lang method-name]
   (case (keyword lang)
     :clj (dashes-to-camel-case method-name)
-    :rb (snake-case-to-camel-case method-name)))
+    :rb (snake-case-to-camel-case method-name)
+    method-name))
 
 (defn clean-syntactic-cruft
   "Remove things from the content of a Parsley node that are not maps (i.e. matched only a regex or string in a parser, and not a rule as a whole)"

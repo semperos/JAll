@@ -10,6 +10,7 @@
             [com.semperos.jall.util :as u]
             [com.semperos.jall.generate.clojure :as clj]
             [com.semperos.jall.generate.ruby :as rb]
+            [com.semperos.jall.generate.scala :as sc]
             [com.semperos.jall.generate.java :as j]
             [com.semperos.jall.generate.java-support :as support])
   (:import [java.util.regex Matcher Pattern]))
@@ -37,7 +38,10 @@
                       (clj/output-file full-class-name right-import right-helpers right-methods))
       :rb (init-file :rb
                      full-class-name
-                     (rb/output-file full-class-name right-import right-helpers right-methods)))))
+                     (rb/output-file full-class-name right-import right-helpers right-methods))
+      :sc (init-file :sc
+                     full-class-name
+                     (sc/output-file full-class-name right-import right-helpers right-methods)))))
 
 (defn output-ajvm-files
   "Given all the method definitions found in the JAll source document, call the appropriate function for transforming method def's for each language"

@@ -46,8 +46,9 @@
   [src-filename]
   (let [common-tree   (p/strict-parse :common src-filename)
         clj-tree      (p/strict-parse :clj src-filename)
-        rb-tree       (p/strict-parse :rb src-filename)]
-    (p/combine-parse-trees common-tree clj-tree rb-tree)))
+        rb-tree       (p/strict-parse :rb src-filename)
+        sc-tree       (p/strict-parse :sc src-filename)]
+    (p/combine-parse-trees common-tree clj-tree rb-tree sc-tree)))
 
 (defn print-jall-output
   "Simply print the output of JAll compilation to `*out*`"
