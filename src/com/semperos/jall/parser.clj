@@ -45,73 +45,104 @@
         def-args [:lparen :arg-type-list :rparen]
         arg-type-list #{"" :arg-type [:arg-type-list :comma :arg-type]}
         arg-type [:identifier :colon :class-name]]
-      (case lang
-        :common (p/parser {:main :expr*
-                           :root-tag :root}
-                      :expr- #{:java-package}
-                      :java-package [:keywd-package #"[^;]+" #";?"]
-                      :keywd-package- #"^\s*package\s+")
-        :clj (p/parser {:main :expr*
-                        :root-tag :root}
-                   :expr- #{:import-block :helper-block :code-block}
-                   :import-block [:keywd-import :open-brackets :close-brackets]
-                   :keywd-import #"!import_(?:clj|clojure)"
-                   :open-brackets open-brackets
-                   :close-brackets close-brackets
-                   
-                   :code-block [:open-block :close-brackets]
-                   :open-block- [:def-prelude :open-brackets]
-                   
-                   :def-prelude- [:keywd-def :def-name :def-return-type :def-args]
-                   :keywd-def #"!def_(?:clj|clojure)\s+"
-                   
-                   :def-name #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
-                   
-                   :def-return-type [#"\s*:\s*" :class-name #"\s*"]
-                   :class-name class-name
-                   
-                   :def-args def-args
-                   
-                   :lparen- lparen
-                   :rparen- rparen
-                   :arg-type-list- arg-type-list
-                   :comma- comma
-                   :arg-type- arg-type
-                   :colon- colon
-                   :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
-
-                   :helper-block [:keywd-helper :open-brackets :close-brackets]
-                   :keywd-helper #"!helpers?_(?:clj|clojure)")
-        :rb (p/parser {:main :expr*
-                       :root-tag :root}
-                   :expr- #{:import-block :helper-block :code-block}
-                   :import-block [:keywd-import :open-brackets :close-brackets]
-                   :keywd-import #"!import_(?:rb|ruby|jruby)"
-                   :open-brackets open-brackets
-                   :close-brackets close-brackets
-                   
-                   :code-block [:open-block :close-brackets]
-                   :open-block- [:def-prelude :open-brackets]
-                   
-                   :def-prelude- [:keywd-def :def-name :def-return-type :def-args]
-                   :keywd-def #"!def_(?:rb|ruby|jruby)\s+"
-                   
-                   :def-name #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
-                   
-                   :def-return-type [#"\s*:\s*" :class-name #"\s*"]
-                   :class-name class-name
+    (case lang
+      :common (p/parser {:main :expr*
+                         :root-tag :root}
+                        :expr- #{:java-package}
+                        :java-package [:keywd-package #"[^;]+" #";?"]
+                        :keywd-package- #"^\s*package\s+")
+      :clj (p/parser {:main :expr*
+                      :root-tag :root}
+                     :expr- #{:import-block :helper-block :code-block}
+                     :import-block [:keywd-import :open-brackets :close-brackets]
+                     :keywd-import #"!import_(?:clj|clojure)"
+                     :open-brackets open-brackets
+                     :close-brackets close-brackets
                      
-                   :def-args def-args
-                   
-                   :lparen- lparen
-                   :rparen- rparen
-                   :arg-type-list- arg-type-list
-                   :comma- comma
-                   :arg-type- arg-type
-                   :colon- colon
-                   :identifier #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
-                   :helper-block [:keywd-helper :open-brackets :close-brackets]
-                   :keywd-helper #"!helpers?_(?:rb|ruby|jruby)"))))
+                     :code-block [:open-block :close-brackets]
+                     :open-block- [:def-prelude :open-brackets]
+                     
+                     :def-prelude- [:keywd-def :def-name :def-return-type :def-args]
+                     :keywd-def #"!def_(?:clj|clojure)\s+"
+                     
+                     :def-name #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
+                     
+                     :def-return-type [#"\s*:\s*" :class-name #"\s*"]
+                     :class-name class-name
+                     
+                     :def-args def-args
+                     
+                     :lparen- lparen
+                     :rparen- rparen
+                     :arg-type-list- arg-type-list
+                     :comma- comma
+                     :arg-type- arg-type
+                     :colon- colon
+                     :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
+
+                     :helper-block [:keywd-helper :open-brackets :close-brackets]
+                     :keywd-helper #"!helpers?_(?:clj|clojure)")
+      :rb (p/parser {:main :expr*
+                     :root-tag :root}
+                    :expr- #{:import-block :helper-block :code-block}
+                    :import-block [:keywd-import :open-brackets :close-brackets]
+                    :keywd-import #"!import_(?:rb|ruby|jruby)"
+                    :open-brackets open-brackets
+                    :close-brackets close-brackets
+                    
+                    :code-block [:open-block :close-brackets]
+                    :open-block- [:def-prelude :open-brackets]
+                    
+                    :def-prelude- [:keywd-def :def-name :def-return-type :def-args]
+                    :keywd-def #"!def_(?:rb|ruby|jruby)\s+"
+                    
+                    :def-name #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
+                    
+                    :def-return-type [#"\s*:\s*" :class-name #"\s*"]
+                    :class-name class-name
+                    
+                    :def-args def-args
+                    
+                    :lparen- lparen
+                    :rparen- rparen
+                    :arg-type-list- arg-type-list
+                    :comma- comma
+                    :arg-type- arg-type
+                    :colon- colon
+                    :identifier #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
+                    :helper-block [:keywd-helper :open-brackets :close-brackets]
+                    :keywd-helper #"!helpers?_(?:rb|ruby|jruby)")
+      :sc (p/parser {:main :expr*
+                     :root-tag :root}
+                    :expr- #{:import-block :helper-block :code-block}
+                    :import-block [:keywd-import :open-brackets :close-brackets]
+                    :keywd-import #"!import_(?:sc|scala)"
+                    :open-brackets open-brackets
+                    :close-brackets close-brackets
+                    
+                    :code-block [:open-block :close-brackets]
+                    :open-block- [:def-prelude :open-brackets]
+                    
+                    :def-prelude- [:keywd-def :def-name :def-return-type :def-args]
+                    :keywd-def #"!def_(?:sc|scala)\s+"
+                    
+                    :def-name #"[a-zA-Z_]+[a-zA-Z0-9_]*"
+                    
+                    :def-return-type [#"\s*:\s*" :class-name #"\s*"]
+                    :class-name class-name
+                    
+                    :def-args def-args
+                    
+                    :lparen- lparen
+                    :rparen- rparen
+                    :arg-type-list- arg-type-list
+                    :comma- comma
+                    :arg-type- arg-type
+                    :colon- colon
+                    :identifier #"[a-zA-Z_]+[a-zA-Z0-9_]*"
+                    :helper-block [:keywd-helper :open-brackets :close-brackets]
+                    :keywd-helper #"!helpers?_(?:sc|scala)"))
+    ))
 
 (defn loose-parse
   "Parse, leave mess"

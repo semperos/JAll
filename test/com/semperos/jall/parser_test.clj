@@ -8,6 +8,7 @@
 (def common-tree (atom nil))
 (def clj-tree (atom nil))
 (def rb-tree (atom nil))
+(def sc-tree (atom nil))
 
 (defn clj-parse
   "Clojure parser (memoized)"
@@ -22,6 +23,13 @@
   (if (nil? @rb-tree)
     (reset! rb-tree (strict-parse :rb sample-src))
     @rb-tree))
+
+(defn sc-parse
+  "Ruby parser (memoized)"
+  []
+  (if (nil? @sc-tree)
+    (reset! sc-tree (strict-parse :sc sample-src))
+    @sc-tree))
 
 (defn common-parse
   "Parser for common components (memoized)"
@@ -194,5 +202,70 @@
    :name "square_nums"
    :return-type "Integer"
    :body #"x\s+\*\s+"
+   :args clojure.lang.PersistentTreeMap
+   :args not-empty))
+
+;; ### Scala Parsing ###
+
+;; Imports
+(expect not-empty
+        (imports (sc-parse)))
+(expect 1
+        (count (imports (sc-parse))))
+(expect :sc
+        (-> (sc-parse) imports first import-lang))
+(expect #"FileInputStream"
+        (-> (sc-parse) imports first import-body))
+(expect com.semperos.jall.parser.Import
+        (first (blocks-as-imports (imports (sc-parse)))))
+(expect 1
+        (count (blocks-as-imports (imports (sc-parse)))))
+(expect #(not (nil? (:lang %))) (first (blocks-as-imports (imports (sc-parse)))))
+(expect #(not (nil? (:body %))) (first (blocks-as-imports (imports (sc-parse)))))
+
+;; Helpers
+(expect not-empty
+        (helpers (sc-parse)))
+(expect 1
+        (count (helpers (sc-parse))))
+(expect :sc
+        (-> (sc-parse) helpers first helper-lang))
+(expect #"Scala helper method"
+        (-> (sc-parse) helpers first helper-body))
+(expect com.semperos.jall.parser.Helper
+        (first (blocks-as-helpers (helpers (sc-parse)))))
+(expect 1
+        (count (blocks-as-helpers (helpers (sc-parse)))))
+(expect #(not (nil? (:lang %))) (first (blocks-as-helpers (helpers (sc-parse)))))
+(expect #(not (nil? (:body %))) (first (blocks-as-helpers (helpers (sc-parse)))))
+
+
+;; Method blocks
+(expect 1
+        (count (blocks (sc-parse))))
+(expect :sc
+        (-> (sc-parse) blocks first block-lang))
+(expect String
+        (-> (sc-parse) blocks first block-method-name))
+(expect not-empty
+        (-> (sc-parse) blocks first block-method-name))
+(expect clojure.lang.PersistentTreeMap
+        (-> (sc-parse) blocks first block-method-args))
+(expect not-empty
+        (-> (sc-parse) blocks first block-method-args))
+(expect String
+        (-> (sc-parse) blocks first block-return-type))
+(expect not-empty
+        (-> (sc-parse) blocks first block-return-type))
+(expect #"x\s+\*\s+\d+"
+        (-> (sc-parse) blocks first block-body))
+(expect com.semperos.jall.parser.Method
+        (-> (sc-parse) blocks blocks-as-methods first))
+(given (-> (sc-parse) blocks blocks-as-methods first)
+  (expect
+   :lang :sc
+   :name "timesEight"
+   :return-type "Integer"
+   :body #"x\s+\*\s+\d+"
    :args clojure.lang.PersistentTreeMap
    :args not-empty))

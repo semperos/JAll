@@ -123,4 +123,6 @@
     :rb :rb
     :ruby :rb
     :jruby :rb
+    :sc :sc
+    :scala :sc
     :java))
