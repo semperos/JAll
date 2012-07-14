@@ -4,7 +4,7 @@
   (:require [expectations.scenarios :as sc]
             [net.cgrand.parsley :as parsley]))
 
-(def sample-src "resources/Hello.jall")
+(def sample-src "resources/Sample.jall")
 (def clj-tree (atom nil))
 (def common-tree (atom nil))
 (defn clj-parse
@@ -61,7 +61,7 @@
         (java-package (common-parse)))
 (expect not-empty
         (java-package (common-parse)))
-(expect "com.example" (java-package (common-parse)))
+(expect "com.semperos" (java-package (common-parse)))
 
 ;; Imports
 (expect not-empty
@@ -72,13 +72,13 @@
         (-> (clj-parse) imports first import-lang))
 (expect '(:require [clojure.string :as string])
         (-> (clj-parse) imports first import-body read-string))
-(expect jall.parser.Import
+(expect com.semperos.jall.parser.Import
         (first (blocks-as-imports (imports (clj-parse)))))
 (expect 1
         (count (blocks-as-imports (imports (clj-parse)))))
 
 ;; Code blocks
-(expect 2
+(expect 1
         (count (blocks (clj-parse))))
 (expect :clj
         (-> (clj-parse) blocks first block-lang))
@@ -94,14 +94,16 @@
         (-> (clj-parse) blocks first block-return-type))
 (expect not-empty
         (-> (clj-parse) blocks first block-return-type))
-(expect '(doseq [n arr-of-names] (println (str "Hello, " n)))
-        (-> (clj-parse) blocks first block-body read-string))
-(expect jall.parser.Method
+(expect 'let
+        (first (-> (clj-parse) blocks first block-body read-string)))
+(expect '(doseq [n names] (println (str "Hello, " n punctuation)))
+        (last (-> (clj-parse) blocks first block-body read-string)))
+(expect com.semperos.jall.parser.Method
         (-> (clj-parse) blocks blocks-as-methods first))
 (given (-> (clj-parse) blocks blocks-as-methods first)
   (expect
    :lang :clj
-   :name "say-hello-to-everyone"
+   :name "say-hello-to-everyone-loudly"
    :return-type "void"
    :body #"println"
    :args clojure.lang.PersistentTreeMap
