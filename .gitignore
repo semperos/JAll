@@ -6,3 +6,5 @@ pom.xml
 .lein-failures
 /docs/
 /target/
+.idea/
+*.iml
