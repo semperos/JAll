@@ -1,1 +1,1 @@
-(ns jall.core-test)
+(ns com.semperos.jall.core-test)

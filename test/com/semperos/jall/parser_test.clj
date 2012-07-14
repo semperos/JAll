@@ -1,6 +1,6 @@
-(ns jall.parser-test
+(ns com.semperos.jall.parser-test
   (:use expectations
-        jall.parser)
+        com.semperos.jall.parser)
   (:require [expectations.scenarios :as sc]
             [net.cgrand.parsley :as parsley]))
 

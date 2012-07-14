@@ -1,5 +1,5 @@
 ;; Learning expectations library
-(ns jall.example-test
+(ns com.semperos.jall.example-test
   (:use expectations))
 
 (expect #"fo+bar" "fooooooooobar")
