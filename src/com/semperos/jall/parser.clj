@@ -1,3 +1,11 @@
+;;   Copyright (c) Daniel Gregoire. All rights reserved.
+;;   The use and distribution terms for this software are covered by the
+;;   Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+;;   which can be found in the file epl-v10.html at the root of this distribution.
+;;   By using this software in any fashion, you are agreeing to be bound by
+;;   the terms of this license.
+;;   You must not remove this notice, or any other, from this software.
+
 (ns com.semperos.jall.parser
   (:use [clojure.pprint :only [pprint]])
   (:require [net.cgrand.parsley :as p]
@@ -48,9 +56,11 @@
     (case lang
       :common (p/parser {:main :expr*
                          :root-tag :root}
-                        :expr- #{:java-package}
+                        :expr- #{:java-package :java-import}
                         :java-package [:keywd-package #"[^;]+" #";?"]
-                        :keywd-package- #"^\s*package\s+")
+                        :keywd-package- #"^\s*package\s+"
+                        :java-import [:keywd-import #"[^;]+" #";?"]
+                        :keywd-import- #"^\s*import\s+")
       :clj (p/parser {:main :expr*
                       :root-tag :root}
                      :expr- #{:import-block :helper-block :code-block}
