@@ -67,7 +67,7 @@
                         :expr- #{:java-package :java-import}
                         :java-package [:keywd-package #"[^;]+" #"(?s);?\s*"]
                         :keywd-package- #"^\s*package\s+"
-                        :java-import [:keywd-import #"[^;]+" #"(?s);?\s*"]
+                        :java-import [:keywd-import #"(?:static\s+)?[^;]+" #"(?s);?\s*"]
                         :keywd-import- #"(?s)^import\s+")
       :clj (p/parser {:main :expr*
                       :root-tag :root}
@@ -182,9 +182,15 @@
   (let [parser (parser :common)
         messy-tree (-> (u/pbuffer-from-file parser file-name)
                        p/parse-tree)
-        legal-content (take-while (fn [node]
-                                    (not= (:tag node) :net.cgrand.parsley/unexpected))
-                                  (:content messy-tree))]
+        legal-content (->> (:content messy-tree)
+                           ;; take the contiguous legal nodes
+                           (take-while (fn [node]
+                                    (not= (:tag node) :net.cgrand.parsley/unexpected)))
+                           ;; JAll doesn't have anything to do with static imports
+                           (remove (fn [node]
+                                     (->> (:content node)
+                                          second
+                                          (re-find #"^static\s+")))))]
     (assoc messy-tree :content legal-content)))
 
 (defn common-parse-str

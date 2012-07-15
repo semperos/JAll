@@ -1,7 +1,9 @@
 package com.semperos;
 
 import java.util.List;
+import static java.lang.Math.*;
 import java.util.ArrayList;
+
 !import_clj{{
   (:require [clojure.string :as string])
 }}
