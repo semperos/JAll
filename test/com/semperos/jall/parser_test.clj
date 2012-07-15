@@ -10,47 +10,47 @@
 (def rb-tree (atom nil))
 (def sc-tree (atom nil))
 
-(defn clj-parse
+(defn clj-parse*
   "Clojure parser (memoized)"
   []
   (if (nil? @clj-tree)
     (reset! clj-tree (strict-parse :clj sample-src))
     @clj-tree))
 
-(defn rb-parse
+(defn rb-parse*
   "Ruby parser (memoized)"
   []
   (if (nil? @rb-tree)
     (reset! rb-tree (strict-parse :rb sample-src))
     @rb-tree))
 
-(defn sc-parse
+(defn sc-parse*
   "Ruby parser (memoized)"
   []
   (if (nil? @sc-tree)
     (reset! sc-tree (strict-parse :sc sample-src))
     @sc-tree))
 
-(defn common-parse
+(defn common-parse*
   "Parser for common components (memoized)"
   []
   (if (nil? @common-tree)
-    (reset! common-tree (strict-parse :common sample-src))
+    (reset! common-tree (common-parse sample-src))
     @common-tree))
 
 ;; ### AJVM Languages Supported ###
 
-(expect IllegalArgumentException (parser :scala)) ;; todo
 (expect fn? (parser :clj)) ;; that's right
 (expect fn? (parser :rb)) ;; JRuby too
+(expect fn? (parser :sc)) ;; Scala was too easy
 
 ;; Basic Success
-(expect net.cgrand.parsley.Node (clj-parse))
-(expect :root (:tag (clj-parse)))
+(expect net.cgrand.parsley.Node (clj-parse*))
+(expect :root (:tag (clj-parse*)))
 
 ;; Strict parsing should remove top-level unexpected nodes
 (expect empty?
-        (filter (fn [node] (= (:tag node) :net.cgrand.parsley/unexpected)) (:content (clj-parse))))
+        (filter (fn [node] (= (:tag node) :net.cgrand.parsley/unexpected)) (:content (clj-parse*))))
 
 ;; The opposite is true for "loose" parsing
 (expect (fn [coll] (> (count coll) 0))
@@ -73,65 +73,71 @@
 ;; ### Common Component Parsing ###
 
 (expect String
-        (java-package (common-parse)))
+        (java-package (common-parse*)))
 (expect not-empty
-        (java-package (common-parse)))
-(expect "com.semperos" (java-package (common-parse)))
+        (java-package (common-parse*)))
+(expect "com.semperos" (java-package (common-parse*)))
+(expect 2
+        (count (java-imports (common-parse*))))
+(expect "java.util.List"
+        (java-import-class (first (java-imports (common-parse*)))))
+(expect "java.util.ArrayList"
+        (java-import-class (second (java-imports (common-parse*)))))
 
 ;; ### Clojure Parsing ###
 
 ;; Imports
 (expect not-empty
-        (imports (clj-parse)))
+        (imports (clj-parse*)))
 (expect 1
-        (count (imports (clj-parse))))
+        (count (imports (clj-parse*))))
 (expect :clj
-        (-> (clj-parse) imports first import-lang))
+        (-> (clj-parse*) imports first import-lang))
 (expect '(:require [clojure.string :as string])
-        (-> (clj-parse) imports first import-body read-string))
+        (-> (clj-parse*) imports first import-body read-string))
 (expect com.semperos.jall.parser.Import
-        (first (blocks-as-imports (imports (clj-parse)))))
+        (first (blocks-as-imports (imports (clj-parse*)))))
 (expect 1
-        (count (blocks-as-imports (imports (clj-parse)))))
+        (count (blocks-as-imports (imports (clj-parse*)))))
 
 ;; Helpers
 (expect not-empty
-        (helpers (clj-parse)))
+        (helpers (clj-parse*)))
 (expect 1
-        (count (helpers (clj-parse))))
+        (count (helpers (clj-parse*))))
 (expect :clj
-        (-> (clj-parse) helpers first helper-lang))
+        (-> (clj-parse*) helpers first helper-lang))
 (expect '(defn try-me [] (println "Clojure helper function"))
-        (-> (clj-parse) helpers first helper-body read-string))
+        (-> (clj-parse*) helpers first helper-body read-string))
 (expect com.semperos.jall.parser.Helper
-        (first (blocks-as-helpers (helpers (clj-parse)))))
+        (first (blocks-as-helpers (helpers (clj-parse*)))))
 (expect 1
-        (count (blocks-as-helpers (helpers (clj-parse)))))
+        (count (blocks-as-helpers (helpers (clj-parse*)))))
 
 ;; Method blocks
 (expect 1
-        (count (blocks (clj-parse))))
+        (count (blocks (clj-parse*))))
 (expect :clj
-        (-> (clj-parse) blocks first block-lang))
+        (-> (clj-parse*) blocks first block-lang))
 (expect String
-        (-> (clj-parse) blocks first block-method-name))
+        (-> (clj-parse*) blocks first block-method-name))
 (expect not-empty
-        (-> (clj-parse) blocks first block-method-name))
+        (-> (clj-parse*) blocks first block-method-name))
 (expect clojure.lang.PersistentTreeMap
-        (-> (clj-parse) blocks first block-method-args))
+        (-> (clj-parse*) blocks first block-method-args))
 (expect not-empty
-        (-> (clj-parse) blocks first block-method-args))
+        (-> (clj-parse*) blocks first block-method-args))
 (expect String
-        (-> (clj-parse) blocks first block-return-type))
+        (-> (clj-parse*) blocks first block-return-type))
 (expect not-empty
-        (-> (clj-parse) blocks first block-return-type))
+        (-> (clj-parse*) blocks first block-return-type))
 (expect 'let
-        (first (-> (clj-parse) blocks first block-body read-string)))
+        (first (-> (clj-parse*) blocks first block-body read-string)))
 (expect '(doseq [n names] (println (str "Hello, " n punctuation)))
-        (last (-> (clj-parse) blocks first block-body read-string)))
+        (last (-> (clj-parse*) blocks first block-body read-string)))
 (expect com.semperos.jall.parser.Method
-        (-> (clj-parse) blocks blocks-as-methods first))
-(given (-> (clj-parse) blocks blocks-as-methods first)
+        (-> (clj-parse*) blocks blocks-as-methods first))
+(given (-> (clj-parse*) blocks blocks-as-methods first)
   (expect
    :lang :clj
    :name "say-hello-to-everyone-loudly"
@@ -144,59 +150,59 @@
 
 ;; Imports
 (expect not-empty
-        (imports (rb-parse)))
+        (imports (rb-parse*)))
 (expect 1
-        (count (imports (rb-parse))))
+        (count (imports (rb-parse*))))
 (expect :rb
-        (-> (rb-parse) imports first import-lang))
+        (-> (rb-parse*) imports first import-lang))
 (expect #"nokogiri"
-        (-> (rb-parse) imports first import-body))
+        (-> (rb-parse*) imports first import-body))
 (expect com.semperos.jall.parser.Import
-        (first (blocks-as-imports (imports (rb-parse)))))
+        (first (blocks-as-imports (imports (rb-parse*)))))
 (expect 1
-        (count (blocks-as-imports (imports (rb-parse)))))
-(expect #(not (nil? (:lang %))) (first (blocks-as-imports (imports (rb-parse)))))
-(expect #(not (nil? (:body %))) (first (blocks-as-imports (imports (rb-parse)))))
+        (count (blocks-as-imports (imports (rb-parse*)))))
+(expect #(not (nil? (:lang %))) (first (blocks-as-imports (imports (rb-parse*)))))
+(expect #(not (nil? (:body %))) (first (blocks-as-imports (imports (rb-parse*)))))
 
 ;; Helpers
 (expect not-empty
-        (helpers (rb-parse)))
+        (helpers (rb-parse*)))
 (expect 1
-        (count (helpers (rb-parse))))
+        (count (helpers (rb-parse*))))
 (expect :rb
-        (-> (rb-parse) helpers first helper-lang))
+        (-> (rb-parse*) helpers first helper-lang))
 (expect #"Ruby helper method"
-        (-> (rb-parse) helpers first helper-body))
+        (-> (rb-parse*) helpers first helper-body))
 (expect com.semperos.jall.parser.Helper
-        (first (blocks-as-helpers (helpers (rb-parse)))))
+        (first (blocks-as-helpers (helpers (rb-parse*)))))
 (expect 1
-        (count (blocks-as-helpers (helpers (rb-parse)))))
-(expect #(not (nil? (:lang %))) (first (blocks-as-helpers (helpers (rb-parse)))))
-(expect #(not (nil? (:body %))) (first (blocks-as-helpers (helpers (rb-parse)))))
+        (count (blocks-as-helpers (helpers (rb-parse*)))))
+(expect #(not (nil? (:lang %))) (first (blocks-as-helpers (helpers (rb-parse*)))))
+(expect #(not (nil? (:body %))) (first (blocks-as-helpers (helpers (rb-parse*)))))
 
 
 ;; Method blocks
 (expect 2
-        (count (blocks (rb-parse))))
+        (count (blocks (rb-parse*))))
 (expect :rb
-        (-> (rb-parse) blocks first block-lang))
+        (-> (rb-parse*) blocks first block-lang))
 (expect String
-        (-> (rb-parse) blocks first block-method-name))
+        (-> (rb-parse*) blocks first block-method-name))
 (expect not-empty
-        (-> (rb-parse) blocks first block-method-name))
+        (-> (rb-parse*) blocks first block-method-name))
 (expect clojure.lang.PersistentTreeMap
-        (-> (rb-parse) blocks first block-method-args))
+        (-> (rb-parse*) blocks first block-method-args))
 (expect not-empty
-        (-> (rb-parse) blocks first block-method-args))
+        (-> (rb-parse*) blocks first block-method-args))
 (expect String
-        (-> (rb-parse) blocks first block-return-type))
+        (-> (rb-parse*) blocks first block-return-type))
 (expect not-empty
-        (-> (rb-parse) blocks first block-return-type))
+        (-> (rb-parse*) blocks first block-return-type))
 (expect #"x\s+\*\s+x"
-        (-> (rb-parse) blocks first block-body))
+        (-> (rb-parse*) blocks first block-body))
 (expect com.semperos.jall.parser.Method
-        (-> (rb-parse) blocks blocks-as-methods first))
-(given (-> (rb-parse) blocks blocks-as-methods first)
+        (-> (rb-parse*) blocks blocks-as-methods first))
+(given (-> (rb-parse*) blocks blocks-as-methods first)
   (expect
    :lang :rb
    :name "square_nums"
@@ -209,59 +215,59 @@
 
 ;; Imports
 (expect not-empty
-        (imports (sc-parse)))
+        (imports (sc-parse*)))
 (expect 1
-        (count (imports (sc-parse))))
+        (count (imports (sc-parse*))))
 (expect :sc
-        (-> (sc-parse) imports first import-lang))
+        (-> (sc-parse*) imports first import-lang))
 (expect #"FileInputStream"
-        (-> (sc-parse) imports first import-body))
+        (-> (sc-parse*) imports first import-body))
 (expect com.semperos.jall.parser.Import
-        (first (blocks-as-imports (imports (sc-parse)))))
+        (first (blocks-as-imports (imports (sc-parse*)))))
 (expect 1
-        (count (blocks-as-imports (imports (sc-parse)))))
-(expect #(not (nil? (:lang %))) (first (blocks-as-imports (imports (sc-parse)))))
-(expect #(not (nil? (:body %))) (first (blocks-as-imports (imports (sc-parse)))))
+        (count (blocks-as-imports (imports (sc-parse*)))))
+(expect #(not (nil? (:lang %))) (first (blocks-as-imports (imports (sc-parse*)))))
+(expect #(not (nil? (:body %))) (first (blocks-as-imports (imports (sc-parse*)))))
 
 ;; Helpers
 (expect not-empty
-        (helpers (sc-parse)))
+        (helpers (sc-parse*)))
 (expect 1
-        (count (helpers (sc-parse))))
+        (count (helpers (sc-parse*))))
 (expect :sc
-        (-> (sc-parse) helpers first helper-lang))
+        (-> (sc-parse*) helpers first helper-lang))
 (expect #"Scala helper method"
-        (-> (sc-parse) helpers first helper-body))
+        (-> (sc-parse*) helpers first helper-body))
 (expect com.semperos.jall.parser.Helper
-        (first (blocks-as-helpers (helpers (sc-parse)))))
+        (first (blocks-as-helpers (helpers (sc-parse*)))))
 (expect 1
-        (count (blocks-as-helpers (helpers (sc-parse)))))
-(expect #(not (nil? (:lang %))) (first (blocks-as-helpers (helpers (sc-parse)))))
-(expect #(not (nil? (:body %))) (first (blocks-as-helpers (helpers (sc-parse)))))
+        (count (blocks-as-helpers (helpers (sc-parse*)))))
+(expect #(not (nil? (:lang %))) (first (blocks-as-helpers (helpers (sc-parse*)))))
+(expect #(not (nil? (:body %))) (first (blocks-as-helpers (helpers (sc-parse*)))))
 
 
 ;; Method blocks
 (expect 1
-        (count (blocks (sc-parse))))
+        (count (blocks (sc-parse*))))
 (expect :sc
-        (-> (sc-parse) blocks first block-lang))
+        (-> (sc-parse*) blocks first block-lang))
 (expect String
-        (-> (sc-parse) blocks first block-method-name))
+        (-> (sc-parse*) blocks first block-method-name))
 (expect not-empty
-        (-> (sc-parse) blocks first block-method-name))
+        (-> (sc-parse*) blocks first block-method-name))
 (expect clojure.lang.PersistentTreeMap
-        (-> (sc-parse) blocks first block-method-args))
+        (-> (sc-parse*) blocks first block-method-args))
 (expect not-empty
-        (-> (sc-parse) blocks first block-method-args))
+        (-> (sc-parse*) blocks first block-method-args))
 (expect String
-        (-> (sc-parse) blocks first block-return-type))
+        (-> (sc-parse*) blocks first block-return-type))
 (expect not-empty
-        (-> (sc-parse) blocks first block-return-type))
+        (-> (sc-parse*) blocks first block-return-type))
 (expect #"x\s+\*\s+\d+"
-        (-> (sc-parse) blocks first block-body))
+        (-> (sc-parse*) blocks first block-body))
 (expect com.semperos.jall.parser.Method
-        (-> (sc-parse) blocks blocks-as-methods first))
-(given (-> (sc-parse) blocks blocks-as-methods first)
+        (-> (sc-parse*) blocks blocks-as-methods first))
+(given (-> (sc-parse*) blocks blocks-as-methods first)
   (expect
    :lang :sc
    :name "timesEight"

@@ -56,11 +56,19 @@
     (case lang
       :common (p/parser {:main :expr*
                          :root-tag :root}
+                        ;; NOTE: The Java package and import statements need to
+                        ;; be declared contiguously (white space permitted).
+                        ;; Any import statements found after an `:unexpected`
+                        ;; node are ignored for the purposes of JAll.
+                        ;;
+                        ;; This 'bug' perhaps will be a feature for folks who
+                        ;; might need to 'hide' Java import statements from JAll's
+                        ;; logic.
                         :expr- #{:java-package :java-import}
-                        :java-package [:keywd-package #"[^;]+" #";?"]
+                        :java-package [:keywd-package #"[^;]+" #"(?s);?\s*"]
                         :keywd-package- #"^\s*package\s+"
-                        :java-import [:keywd-import #"[^;]+" #";?"]
-                        :keywd-import- #"^\s*import\s+")
+                        :java-import [:keywd-import #"[^;]+" #"(?s);?\s*"]
+                        :keywd-import- #"(?s)^import\s+")
       :clj (p/parser {:main :expr*
                       :root-tag :root}
                      :expr- #{:import-block :helper-block :code-block}
@@ -168,6 +176,29 @@
         (p/edit 0 0 input)
         p/parse-tree)))
 
+(defn common-parse
+  "Custom parsing logic for the `:common` parser, based on `loose-parse`"
+  [file-name]
+  (let [parser (parser :common)
+        messy-tree (-> (u/pbuffer-from-file parser file-name)
+                       p/parse-tree)
+        legal-content (take-while (fn [node]
+                                    (not= (:tag node) :net.cgrand.parsley/unexpected))
+                                  (:content messy-tree))]
+    (assoc messy-tree :content legal-content)))
+
+(defn common-parse-str
+  "Custom parsing logic for the `:common` parser, based on `loose-parse`"
+  [input]
+  (let [parser (parser :common)
+        messy-tree (-> (p/incremental-buffer parser)
+                       (p/edit 0 0 input)
+                       p/parse-tree)
+        legal-content (take-while (fn [node]
+                                    (not= (:tag node) :net.cgrand.parsley/unexpected))
+                                  (:content messy-tree))]
+    (assoc messy-tree :content legal-content)))
+
 (defn strict-parse
   "Parse and remove unexpected top-level things for the given AJVM `lang`"
   [lang file-name]
@@ -207,6 +238,19 @@
     (-> java-package-node
         :content
         second)))
+
+(defn java-imports
+  "Pull out the top-level Java imports in the file"
+  [root-node]
+  (let [content (:content root-node)]
+    (filter #(= (:tag %) :java-import) content)))
+
+(defn java-import-class
+  "Given a `java-import` node, extract the value of the class being imported"
+  [java-import]
+  (-> java-import
+      :content
+      second))
 
 (defn imports
   "Specialized JAll import for AJVM languages"
