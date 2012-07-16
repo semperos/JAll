@@ -134,3 +134,8 @@
     :sc :sc
     :scala :sc
     :java))
+
+(defn file-langs
+  "Return the languages found in all `File` records"
+  [file-records]
+  (map #(:lang %) file-records))

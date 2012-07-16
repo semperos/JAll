@@ -177,7 +177,7 @@
         p/parse-tree)))
 
 (defn common-parse
-  "Custom parsing logic for the `:common` parser, based on `loose-parse`"
+  "Custom parsing logic for the `:common` parser, based on `loose-parse` but pruning the parse tree."
   [file-name]
   (let [parser (parser :common)
         messy-tree (-> (u/pbuffer-from-file parser file-name)
@@ -185,7 +185,7 @@
         legal-content (->> (:content messy-tree)
                            ;; take the contiguous legal nodes
                            (take-while (fn [node]
-                                    (not= (:tag node) :net.cgrand.parsley/unexpected)))
+                                         (not= (:tag node) :net.cgrand.parsley/unexpected)))
                            ;; JAll doesn't have anything to do with static imports
                            (remove (fn [node]
                                      (->> (:content node)
@@ -200,9 +200,15 @@
         messy-tree (-> (p/incremental-buffer parser)
                        (p/edit 0 0 input)
                        p/parse-tree)
-        legal-content (take-while (fn [node]
-                                    (not= (:tag node) :net.cgrand.parsley/unexpected))
-                                  (:content messy-tree))]
+        legal-content (->> (:content messy-tree)
+                           ;; take the contiguous legal nodes
+                           (take-while (fn [node]
+                                         (not= (:tag node) :net.cgrand.parsley/unexpected)))
+                           ;; JAll doesn't have anything to do with static imports
+                           (remove (fn [node]
+                                     (->> (:content node)
+                                          second
+                                          (re-find #"^static\s+")))))]
     (assoc messy-tree :content legal-content)))
 
 (defn strict-parse

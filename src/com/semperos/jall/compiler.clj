@@ -52,7 +52,7 @@
 (defn jall-parse-tree
   "Given a source file, return the given Parsley parse tree"
   [src-filename]
-  (let [common-tree   (p/strict-parse :common src-filename)
+  (let [common-tree   (p/common-parse src-filename)
         clj-tree      (p/strict-parse :clj src-filename)
         rb-tree       (p/strict-parse :rb src-filename)
         sc-tree       (p/strict-parse :sc src-filename)]
@@ -92,12 +92,10 @@
         ajvm-files    (produce-ajvm-files src-filename parse-tree)
         java-support-files (produce-java-support-files src-filename
                                                        parse-tree
-                                                       (map (fn [file-record]
-                                                              (:lang file-record)) ajvm-files))
+                                                       (u/file-langs ajvm-files))
         java-file     (reproduce-java-file src-filename
                                            parse-tree
-                                           (map (fn [file-record]
-                                                  (:lang file-record)) ajvm-files))]
+                                           (u/file-langs ajvm-files))]
     [java-support-files ajvm-files java-file]))
 
 (defn emit
@@ -114,6 +112,7 @@
                           java-file))))
 
 (defn process-src-file
+  "Compile and emit code for a single JAll file."
   ([root-dir source-filename] (process-src-file root-dir source-filename false))
   ([root-dir source-filename dry-run?]
      (let [[java-support-files ajvm-files java-file] (compile-file source-filename)]
@@ -121,6 +120,7 @@
 
 ;; (process-src-dir "/Users/semperos/dev/jall/sample" "/Users/semperos/dev/jall/sample/src/main/jall")
 (defn process-src-dir
+  "Compile and emit code for all code in a source directory (uses `file-seq` logic)"
   ([root-dir source-dir] (process-src-dir root-dir source-dir false))
   ([root-dir source-dir dry-run?]
      (let [sources (find-source-files source-dir)]
