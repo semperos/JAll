@@ -91,7 +91,7 @@
 (scenario
  (given (java-imports (common-parse*))
    (expect
-    count 2
+    count 3
     #(java-import-class (first %)) "java.util.List"
     #(java-import-class (second %)) "java.util.ArrayList")))
 

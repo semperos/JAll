@@ -8,6 +8,7 @@
 
 (ns com.semperos.jall.generate.java
   (:require [com.semperos.jall.util :as u]
+            [com.semperos.jall.parser :as p]
             [clojure.string :as string]))
 
 (defn comment-out-positions
@@ -48,32 +49,53 @@
   (let [positions (comment-out-positions file-content)]
     (comment-out-regions file-content positions)))
 
+(defn transform-method-call
+  [state to-replace lang class-name method-name]
+  (.replaceAll state to-replace
+               (str
+                "new "
+                (u/translate-class-name lang class-name)
+                "()."
+                (u/translate-method-name lang method-name)
+                "(")))
+
 (defn replace-method-calls
   "Find calls like `!clj_my-method-here(foo)` and replace them with the correct Java.
 
    TODO: This should probably be handled using things we actually parse out, so we're not parsing all over the place in different ways."
   [file-content full-class-name]
-  (let [method-sigs (re-seq #"(?s)!(clj|rb|sc)_([^\(]+)\(" file-content)]
+  (let [parse-tree (p/adhoc-parse (p/parser :common) file-content)
+        java-package (p/java-package parse-tree)
+        java-imports (map p/java-import-class
+                          (p/java-imports parse-tree)) 
+        method-sigs (re-seq #"(?s)!(clj|rb|sc)_([^\(]+)\(" file-content)]
     (reduce (fn [state [whole lang method-name]]
               (let [to-replace (str (apply str (butlast whole)) "\\(")]
-                (if (.contains method-name ".")
-                  ;; if there's a dot, it means this is a fully-qualified reference to another class
+                (if (.contains method-name "/")
+                  ;; if there's a slash, it means this is a fully-qualified reference to another class
                   (let [other-class (second (re-find #"([^/]+)/" method-name))
                         real-method-name (second (re-find #"/(.*)$" method-name))]
-                    (.replaceAll state to-replace
-                                 (str
-                                  "new "
-                                  (u/translate-class-name lang other-class)
-                                  "()."
-                                  (u/translate-method-name lang real-method-name)
-                                  "(")))
-                  (.replaceAll state to-replace
-                               (str
-                                "new "
-                                (u/translate-class-name lang full-class-name)
-                                "()."
-                                (u/translate-method-name lang method-name)
-                                "(")))))
+                    (if (.contains other-class ".")
+                      ;; if other-class has a dot, then it's fully-qualified, leave it alone
+                      (transform-method-call state to-replace lang other-class real-method-name)
+                      ;; else it's not fully-qualified, so reference the java-imports to make it so
+                      (if (some #{other-class} (map u/class-from-class-name java-imports))
+                        ;; if an explicit import has the same class name, use it (first that matches)
+                        (transform-method-call state
+                                               to-replace
+                                               lang
+                                               (first
+                                                (filter (fn [impt]
+                                                          (= (u/class-from-class-name impt)
+                                                             other-class)) java-imports))
+                                               real-method-name)
+                        ;; else use the package of the file we're currently in + the other-class value
+                        (transform-method-call state
+                                               to-replace
+                                               lang
+                                               (str java-package "." other-class)
+                                               real-method-name))))
+                  (transform-method-call state to-replace lang full-class-name method-name))))
             file-content
             method-sigs)))
 

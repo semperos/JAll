@@ -4,6 +4,8 @@ import java.util.List;
 import static java.lang.Math.*;
 import java.util.ArrayList;
 
+import com.semperos.util.Wowza;
+
 !import_clj{{
   (:require [clojure.string :as string])
 }}
@@ -41,6 +43,8 @@ public class Sample {
                 (println (str "Hello, " n punctuation))))
         }}
         !clj_say-hello-to-everyone-loudly(names, "!!!");
+        !clj_Foo/should-be-same-package();
+        !clj_Wowza/should-be-com-semperos-util();
     }
 
     public static Integer squareThenDivideByTwo(Integer x) {
