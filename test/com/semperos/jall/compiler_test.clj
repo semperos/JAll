@@ -75,4 +75,8 @@
                                       (u/file-langs (jall-parse-tree sample-src)))
     ;; force evaluation
     #(first (second %)) (first (produce-ajvm-files sample-src
-                                                   (jall-parse-tree sample-src))))))
+                                                   (jall-parse-tree sample-src)))
+    last (reproduce-java-file sample-src
+                              (jall-parse-tree sample-src)
+                              (u/file-langs (produce-ajvm-files sample-src
+                                                                (jall-parse-tree sample-src)))))))
