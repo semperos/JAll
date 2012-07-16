@@ -16,10 +16,10 @@ package com.example;
 
 public class Foo {
     public static Integer squareNum(Integer x) {
-        !def_clj square-num(x : Integer) : Integer {{
+        $def_clj square-num(x : Integer) : Integer {{
           (* x x)
         }}
-        return !clj_square-num(x);
+        return $clj_square-num(x);
     }
     ....
 ```
@@ -42,7 +42,7 @@ import com.example.FooClj;
 public class Foo {
     public static Integer squareNum(Integer x) {
     /*
-        !def_clj square-num(x : Integer) : Integer {{
+        $def_clj square-num(x : Integer) : Integer {{
           (* x x)
         }}
     */
