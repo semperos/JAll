@@ -17,6 +17,7 @@
                  (jall-parse-tree sample-src))))
 
 (scenario
+ ;; Finding JAll source files
  (given (find-source-files sample-src-dir)
    (expect
     count 1
@@ -24,24 +25,54 @@
     #(str (first %)) sample-src)))
 
 (scenario
+ ;; Producing AJVM files from source
  (given (produce-ajvm-files sample-src (jall-parse-tree sample-src))
    (expect
     identity coll?
-    identity (fn [coll]
-               (every? #(= com.semperos.jall.generate.File (type %)) coll))
-    identity (fn [coll]
-               (some #(= :clj (:lang %)) coll))
-    identity (fn [coll]
-               (some #(= :rb (:lang %)) coll))
-    identity (fn [coll]
-               (some #(= :sc (:lang %)) coll)))))
+    identity             #(every? gen/file? %)
+    #(map :content %)    #(every? not-empty %)
+    #(map :content %)    #(every? string? %)
+    #(map :class-name %) #(every? not-empty %)
+    #(map :class-name %) #(every? string? %)
+    #(map :lang %)       #(some #{:clj} %)
+    #(map :lang %)       #(some #{:rb} %)
+    #(map :lang %)       #(some #{:sc} %))))
 
 (scenario
+ ;; Producing Java interfaces for Clojure interop
  (given (produce-java-support-files sample-src
                                     (jall-parse-tree sample-src)
-                                    (u/file-langs (produce-ajvm-files sample-src (jall-parse-tree sample-src))))
+                                    (u/file-langs
+                                     (produce-ajvm-files sample-src
+                                                         (jall-parse-tree sample-src))))
    (expect
     identity coll?
     identity (fn [coll]
                (every? #(= com.semperos.jall.generate.File (type %)) coll)))))
 
+(scenario
+ ;; Transforming the original Java source
+ (given (reproduce-java-file sample-src
+                             (jall-parse-tree sample-src)
+                             (u/file-langs
+                              (produce-ajvm-files sample-src
+                                                  (jall-parse-tree sample-src))))
+   (expect
+    identity com.semperos.jall.generate.File
+    :lang :java
+    :class-name not-empty
+    :content not-empty)))
+
+(scenario
+ (given (compile-file sample-src)
+   (expect
+    count 3
+    first coll?
+    second coll?
+    last com.semperos.jall.generate.File
+    first (produce-java-support-files sample-src
+                                      (jall-parse-tree sample-src)
+                                      (u/file-langs (jall-parse-tree sample-src)))
+    ;; force evaluation
+    #(first (second %)) (first (produce-ajvm-files sample-src
+                                                   (jall-parse-tree sample-src))))))
