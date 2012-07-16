@@ -1,10 +1,10 @@
 (ns com.semperos.jall.parser-test
-  (:use expectations
-        com.semperos.jall.parser)
-  (:require [expectations.scenarios :as sc]
-            [net.cgrand.parsley :as parsley]))
+  (:use expectations.scenarios
+        com.semperos.jall.parser
+        [com.semperos.jall.test-utils :only [sample-src]])
+  (:require [net.cgrand.parsley :as parsley]))
 
-(def sample-src "resources/Sample.jall")
+
 (def common-tree (atom nil))
 (def clj-tree (atom nil))
 (def rb-tree (atom nil))
@@ -40,238 +40,339 @@
 
 ;; ### AJVM Languages Supported ###
 
-(expect fn? (parser :clj)) ;; that's right
-(expect fn? (parser :rb)) ;; JRuby too
-(expect fn? (parser :sc)) ;; Scala was too easy
+(scenario
+ (given [check lang] (expect check (parser lang))
+   (expect
+    fn? :clj
+    fn? :rb
+    fn? :sc)))
 
-;; Basic Success
-(expect net.cgrand.parsley.Node (clj-parse*))
-(expect :root (:tag (clj-parse*)))
+(scenario
+ (given (clj-parse*)
+   (expect
+    identity net.cgrand.parsley.Node
+    :tag :root)))
 
-;; Strict parsing should remove top-level unexpected nodes
-(expect empty?
-        (filter (fn [node] (= (:tag node) :net.cgrand.parsley/unexpected)) (:content (clj-parse*))))
+(scenario
+ ;; Strict vs Loose parsing
+ (given [filter-fn pred] (expect pred
+                                 (filter (fn [node]
+                                           (= (:tag node) :net.cgrand.parsley/unexpected))
+                                         (:content (filter-fn :clj sample-src))))
+   strict-parse empty?
+   loose-parse #(> (count %) 0)))
 
-;; The opposite is true for "loose" parsing
-(expect (fn [coll] (> (count coll) 0))
-        (filter (fn [node] (= (:tag node) :net.cgrand.parsley/unexpected)) (:content (loose-parse :clj sample-src))))
+(scenario
+ (given (strict-parse-str :clj (slurp sample-src))
+   (expect
+    identity net.cgrand.parsley.Node
+    :tag :root
+    empty? #(filter (fn [node]
+                     (= (:tag node) :net.cgrand.parsley/unexpected))
+                   (:content %)))))
 
-;; Also support parsing strings directly
-(given (slurp sample-src)
-  (expect
-   (fn [s] (strict-parse-str :clj s)) net.cgrand.parsley.Node
-   (fn [s] (:tag (strict-parse-str :clj s))) :root
-   (fn [s] (filter
-           (fn [node] (= (:tag node) :net.cgrand.parsley/unexpected))
-           (:content (strict-parse-str :clj s)))) empty?))
-
-;; For testing purposes, we keep an adhoc-parse around that uses a buffer
-(expect net.cgrand.parsley.Node (adhoc-parse (parsley/parser :list #{:word [:list "," :word]}
-                                                             :word #"\w+")
-                                             "foo,bar,baz"))
+(scenario
+ (given (adhoc-parse (parsley/parser :list #{:word [:list "," :word]}
+                                     :word #"\w+")
+                     "foo,bar,baz")
+   (expect
+    identity net.cgrand.parsley.Node
+    :tag :net.cgrand.parsley/root)))
 
 ;; ### Common Component Parsing ###
 
-(expect String
-        (java-package (common-parse*)))
-(expect not-empty
-        (java-package (common-parse*)))
-(expect "com.semperos" (java-package (common-parse*)))
-(expect 2
-        (count (java-imports (common-parse*))))
-(expect "java.util.List"
-        (java-import-class (first (java-imports (common-parse*)))))
-(expect "java.util.ArrayList"
-        (java-import-class (second (java-imports (common-parse*)))))
+(scenario
+ (given (java-package (common-parse*))
+   (expect
+    identity String
+    identity not-empty
+    identity "com.semperos")))
+
+(scenario
+ (given (java-imports (common-parse*))
+   (expect
+    count 2
+    #(java-import-class (first %)) "java.util.List"
+    #(java-import-class (second %)) "java.util.ArrayList")))
+
 
 ;; ### Clojure Parsing ###
 
-;; Imports
-(expect not-empty
-        (imports (clj-parse*)))
-(expect 1
-        (count (imports (clj-parse*))))
-(expect :clj
-        (-> (clj-parse*) imports first import-lang))
-(expect '(:require [clojure.string :as string])
-        (-> (clj-parse*) imports first import-body read-string))
-(expect com.semperos.jall.parser.Import
-        (first (blocks-as-imports (imports (clj-parse*)))))
-(expect 1
-        (count (blocks-as-imports (imports (clj-parse*)))))
+;; Import nodes
+(scenario
+ (given (imports (clj-parse*))
+   (expect
+    identity not-empty
+    count 1
+    identity (fn [impts] (every? #(= net.cgrand.parsley.Node (type %)) impts)))))
 
-;; Helpers
-(expect not-empty
-        (helpers (clj-parse*)))
-(expect 1
-        (count (helpers (clj-parse*))))
-(expect :clj
-        (-> (clj-parse*) helpers first helper-lang))
-(expect '(defn try-me [] (println "Clojure helper function"))
-        (-> (clj-parse*) helpers first helper-body read-string))
-(expect com.semperos.jall.parser.Helper
-        (first (blocks-as-helpers (helpers (clj-parse*)))))
-(expect 1
-        (count (blocks-as-helpers (helpers (clj-parse*)))))
+;; Single import node
+(scenario
+ (given (first (imports (clj-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    import-lang :clj
+    #(-> % import-body read-string) '(:require [clojure.string :as string]))))
 
-;; Method blocks
-(expect 1
-        (count (blocks (clj-parse*))))
-(expect :clj
-        (-> (clj-parse*) blocks first block-lang))
-(expect String
-        (-> (clj-parse*) blocks first block-method-name))
-(expect not-empty
-        (-> (clj-parse*) blocks first block-method-name))
-(expect clojure.lang.PersistentTreeMap
-        (-> (clj-parse*) blocks first block-method-args))
-(expect not-empty
-        (-> (clj-parse*) blocks first block-method-args))
-(expect String
-        (-> (clj-parse*) blocks first block-return-type))
-(expect not-empty
-        (-> (clj-parse*) blocks first block-return-type))
-(expect 'let
-        (first (-> (clj-parse*) blocks first block-body read-string)))
-(expect '(doseq [n names] (println (str "Hello, " n punctuation)))
-        (last (-> (clj-parse*) blocks first block-body read-string)))
-(expect com.semperos.jall.parser.Method
-        (-> (clj-parse*) blocks blocks-as-methods first))
-(given (-> (clj-parse*) blocks blocks-as-methods first)
-  (expect
-   :lang :clj
-   :name "say-hello-to-everyone-loudly"
-   :return-type "void"
-   :body #"println"
-   :args clojure.lang.PersistentTreeMap
-   :args not-empty))
+;; Import records
+(scenario
+ (given (blocks-as-imports (imports (clj-parse*)))
+   (expect
+    identity (fn [impts] (every? #(= (type %) com.semperos.jall.parser.Import) impts)) 
+    count 1)))
+
+;; Helper nodes
+(scenario
+ (given (helpers (clj-parse*))
+   (expect
+    identity not-empty
+    count 1
+    identity (fn [hlprs] (every? #(= net.cgrand.parsley.Node (type %)) hlprs)))))
+
+;; Single Helper node
+(scenario
+ (given (first (helpers (clj-parse*)))
+   (expect
+    helper-lang :clj
+    #(-> % helper-body read-string) '(defn try-me [] (println "Clojure helper function")))))
+
+;; Helper records
+(scenario
+ (given (blocks-as-helpers (helpers (clj-parse*)))
+   (expect
+    identity (fn [hlprs] (every? #(= (type %) com.semperos.jall.parser.Helper) hlprs)) 
+    count 1)))
+
+;; Method block nodes
+(scenario
+ (given (blocks (clj-parse*))
+   (expect
+    count 1
+    identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
+
+;; Single method block node
+(scenario
+ (given (first (blocks (clj-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    block-lang :clj
+    block-method-name String
+    block-method-name not-empty
+    block-method-args clojure.lang.PersistentTreeMap
+    block-method-args not-empty
+    block-return-type String
+    block-return-type not-empty
+    #(first (-> % block-body read-string)) 'let
+    #(last (-> % block-body read-string)) '(doseq [n names] (println (str "Hello, " n punctuation))))))
+
+;; Method records
+(scenario
+ (given (blocks-as-methods (blocks (clj-parse*)))
+   (expect
+    identity (fn [mthds] (every? #(= (type %) com.semperos.jall.parser.Method) mthds)))))
+
+;; Individual Method record
+(scenario
+ (given (-> (clj-parse*) blocks blocks-as-methods first)
+   (expect
+    :lang :clj
+    :name "say-hello-to-everyone-loudly"
+    :return-type "void"
+    :body #"println"
+    :args clojure.lang.PersistentTreeMap
+    :args not-empty)))
 
 ;; ### Ruby Parsing ###
 
-;; Imports
-(expect not-empty
-        (imports (rb-parse*)))
-(expect 1
-        (count (imports (rb-parse*))))
-(expect :rb
-        (-> (rb-parse*) imports first import-lang))
-(expect #"nokogiri"
-        (-> (rb-parse*) imports first import-body))
-(expect com.semperos.jall.parser.Import
-        (first (blocks-as-imports (imports (rb-parse*)))))
-(expect 1
-        (count (blocks-as-imports (imports (rb-parse*)))))
-(expect #(not (nil? (:lang %))) (first (blocks-as-imports (imports (rb-parse*)))))
-(expect #(not (nil? (:body %))) (first (blocks-as-imports (imports (rb-parse*)))))
+;; Import nodes
+(scenario
+ (given (imports (rb-parse*))
+   (expect
+    identity not-empty
+    count 1
+    identity (fn [impts] (every? #(= net.cgrand.parsley.Node (type %)) impts)))))
 
-;; Helpers
-(expect not-empty
-        (helpers (rb-parse*)))
-(expect 1
-        (count (helpers (rb-parse*))))
-(expect :rb
-        (-> (rb-parse*) helpers first helper-lang))
-(expect #"Ruby helper method"
-        (-> (rb-parse*) helpers first helper-body))
-(expect com.semperos.jall.parser.Helper
-        (first (blocks-as-helpers (helpers (rb-parse*)))))
-(expect 1
-        (count (blocks-as-helpers (helpers (rb-parse*)))))
-(expect #(not (nil? (:lang %))) (first (blocks-as-helpers (helpers (rb-parse*)))))
-(expect #(not (nil? (:body %))) (first (blocks-as-helpers (helpers (rb-parse*)))))
+;; Single import node
+(scenario
+ (given (first (imports (rb-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    import-lang :rb
+    import-body #"nokogiri")))
 
+;; Import records
+(scenario
+ (given (blocks-as-imports (imports (rb-parse*)))
+   (expect
+    count 1
+    identity (fn [impts] (every? #(= (type %) com.semperos.jall.parser.Import) impts)))))
 
-;; Method blocks
-(expect 2
-        (count (blocks (rb-parse*))))
-(expect :rb
-        (-> (rb-parse*) blocks first block-lang))
-(expect String
-        (-> (rb-parse*) blocks first block-method-name))
-(expect not-empty
-        (-> (rb-parse*) blocks first block-method-name))
-(expect clojure.lang.PersistentTreeMap
-        (-> (rb-parse*) blocks first block-method-args))
-(expect not-empty
-        (-> (rb-parse*) blocks first block-method-args))
-(expect String
-        (-> (rb-parse*) blocks first block-return-type))
-(expect not-empty
-        (-> (rb-parse*) blocks first block-return-type))
-(expect #"x\s+\*\s+x"
-        (-> (rb-parse*) blocks first block-body))
-(expect com.semperos.jall.parser.Method
-        (-> (rb-parse*) blocks blocks-as-methods first))
-(given (-> (rb-parse*) blocks blocks-as-methods first)
-  (expect
-   :lang :rb
-   :name "square_nums"
-   :return-type "Integer"
-   :body #"x\s+\*\s+"
-   :args clojure.lang.PersistentTreeMap
-   :args not-empty))
+;; Helper nodes
+(scenario
+ (given (helpers (rb-parse*))
+   (expect
+    identity not-empty
+    count 1
+    identity (fn [hlprs] (every? #(= net.cgrand.parsley.Node (type %)) hlprs)))))
 
-;; ### Scala Parsing ###
+;; Single Helper node
+(scenario
+ (given (first (helpers (rb-parse*)))
+   (expect
+    helper-lang :rb
+    helper-body #"Ruby helper method")))
 
-;; Imports
-(expect not-empty
-        (imports (sc-parse*)))
-(expect 1
-        (count (imports (sc-parse*))))
-(expect :sc
-        (-> (sc-parse*) imports first import-lang))
-(expect #"FileInputStream"
-        (-> (sc-parse*) imports first import-body))
-(expect com.semperos.jall.parser.Import
-        (first (blocks-as-imports (imports (sc-parse*)))))
-(expect 1
-        (count (blocks-as-imports (imports (sc-parse*)))))
-(expect #(not (nil? (:lang %))) (first (blocks-as-imports (imports (sc-parse*)))))
-(expect #(not (nil? (:body %))) (first (blocks-as-imports (imports (sc-parse*)))))
+;; Helper records
+(scenario
+ (given (blocks-as-helpers (helpers (rb-parse*)))
+   (expect
+    identity (fn [hlprs] (every? #(= (type %) com.semperos.jall.parser.Helper) hlprs)) 
+    count 1)))
 
-;; Helpers
-(expect not-empty
-        (helpers (sc-parse*)))
-(expect 1
-        (count (helpers (sc-parse*))))
-(expect :sc
-        (-> (sc-parse*) helpers first helper-lang))
-(expect #"Scala helper method"
-        (-> (sc-parse*) helpers first helper-body))
-(expect com.semperos.jall.parser.Helper
-        (first (blocks-as-helpers (helpers (sc-parse*)))))
-(expect 1
-        (count (blocks-as-helpers (helpers (sc-parse*)))))
-(expect #(not (nil? (:lang %))) (first (blocks-as-helpers (helpers (sc-parse*)))))
-(expect #(not (nil? (:body %))) (first (blocks-as-helpers (helpers (sc-parse*)))))
+;; Method block nodes
+(scenario
+ (given (blocks (rb-parse*))
+   (expect
+    count 2
+    identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
 
+;; Single method block node
+(scenario
+ (given (first (blocks (rb-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    block-lang :rb
+    block-method-name String
+    block-method-name not-empty
+    block-method-args clojure.lang.PersistentTreeMap
+    block-method-args not-empty
+    block-return-type String
+    block-return-type not-empty
+    block-body #"x\s+\*\s+x")))
 
-;; Method blocks
-(expect 1
-        (count (blocks (sc-parse*))))
-(expect :sc
-        (-> (sc-parse*) blocks first block-lang))
-(expect String
-        (-> (sc-parse*) blocks first block-method-name))
-(expect not-empty
-        (-> (sc-parse*) blocks first block-method-name))
-(expect clojure.lang.PersistentTreeMap
-        (-> (sc-parse*) blocks first block-method-args))
-(expect not-empty
-        (-> (sc-parse*) blocks first block-method-args))
-(expect String
-        (-> (sc-parse*) blocks first block-return-type))
-(expect not-empty
-        (-> (sc-parse*) blocks first block-return-type))
-(expect #"x\s+\*\s+\d+"
-        (-> (sc-parse*) blocks first block-body))
-(expect com.semperos.jall.parser.Method
-        (-> (sc-parse*) blocks blocks-as-methods first))
-(given (-> (sc-parse*) blocks blocks-as-methods first)
-  (expect
-   :lang :sc
-   :name "timesEight"
-   :return-type "Integer"
-   :body #"x\s+\*\s+\d+"
-   :args clojure.lang.PersistentTreeMap
-   :args not-empty))
+;; Method records
+(scenario
+ (given (blocks-as-methods (blocks (rb-parse*)))
+   (expect
+    identity (fn [mthds] (every? #(= (type %) com.semperos.jall.parser.Method) mthds)))))
+
+;; Individual Method record
+(scenario
+ (given (-> (rb-parse*) blocks blocks-as-methods first)
+   (expect
+    :lang :rb
+    :name "square_nums"
+    :return-type "Integer"
+    :body #"x\s+\*\s+"
+    :args clojure.lang.PersistentTreeMap
+    :args not-empty)))
+
+;; ### Scala (new) Parsing ###
+
+;; Import nodes
+(scenario
+ (given (imports (sc-parse*))
+   (expect
+    identity not-empty
+    count 1
+    identity (fn [impts] (every? #(= net.cgrand.parsley.Node (type %)) impts)))))
+
+;; Single import node
+(scenario
+ (given (first (imports (sc-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    import-lang :sc
+    import-body #"FileInputStream")))
+
+;; Import records
+(scenario
+ (given (blocks-as-imports (imports (sc-parse*)))
+   (expect
+    count 1
+    identity (fn [impts] (every? #(= (type %) com.semperos.jall.parser.Import) impts)))))
+
+;; Helper nodes
+(scenario
+ (given (helpers (sc-parse*))
+   (expect
+    identity not-empty
+    count 1
+    identity (fn [hlprs] (every? #(= net.cgrand.parsley.Node (type %)) hlprs)))))
+
+;; Single Helper node
+(scenario
+ (given (first (helpers (sc-parse*)))
+   (expect
+    helper-lang :sc
+    helper-body #"Scala helper method")))
+
+;; Helper records
+(scenario
+ (given (blocks-as-helpers (helpers (sc-parse*)))
+   (expect
+    identity (fn [hlprs] (every? #(= (type %) com.semperos.jall.parser.Helper) hlprs)) 
+    count 1)))
+
+;; Method block nodes
+(scenario
+ (given (blocks (sc-parse*))
+   (expect
+    count 1
+    identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
+
+;; Single method block node
+(scenario
+ (given (first (blocks (sc-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    block-lang :sc
+    block-method-name String
+    block-method-name not-empty
+    block-method-args clojure.lang.PersistentTreeMap
+    block-method-args not-empty
+    block-return-type String
+    block-return-type not-empty
+    block-body #"x\s+\*\s+\d+")))
+
+;; Method records
+(scenario
+ (given (blocks-as-methods (blocks (sc-parse*)))
+   (expect
+    identity (fn [mthds] (every? #(= (type %) com.semperos.jall.parser.Method) mthds)))))
+
+;; Individual Method record
+(scenario
+ (given (-> (sc-parse*) blocks blocks-as-methods first)
+   (expect
+    :lang :sc
+    :name "timesEight"
+    :return-type "Integer"
+    :body #"x\s+\*\s+\d+"
+    :args clojure.lang.PersistentTreeMap
+    :args not-empty)))
+
+;; ### Higher-level Parsing ###
+(scenario
+ (given (combine-parse-trees (common-parse*)
+                             (clj-parse*)
+                             (rb-parse*)
+                             (sc-parse*))
+   (expect
+    identity net.cgrand.parsley.Node
+    :tag :root
+    empty? #(filter (fn [node]
+               (= (:tag node) :net.cgrand.parsley/unexpected))
+             %)
+    identity #(not= % (clj-parse*))
+    identity #(not= % (rb-parse*))
+    identity #(not= % (sc-parse*))
+    identity (fn [tree] (every? (fn [content-item]
+                                 (some #{content-item} (:content tree)))
+                               (:content (clj-parse*))))
+    identity (fn [tree] (every? (fn [content-item]
+                                 (some #{content-item} (:content tree)))
+                               (:content (rb-parse*))))
+    identity (fn [tree] (every? (fn [content-item]
+                                 (some #{content-item} (:content tree)))
+                               (:content (sc-parse*)))))))
