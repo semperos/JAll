@@ -33,6 +33,11 @@
   ([lang class-name content] (init-file lang class-name content nil))
   ([lang class-name content support-file?] (File. lang class-name content support-file?)))
 
+(defn file?
+  "True if the type of argument is a `File`"
+  [f]
+  (= (type f) File))
+
 (defn output-file
   "Intermediate fn for output-ajvm-files for dispatching on value of lang"
   [full-class-name lang imports helpers methods]
