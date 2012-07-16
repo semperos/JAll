@@ -90,13 +90,15 @@
         ;;                   #{}
         ;;                   methods)
         ;;
-        ;; Between Clojure and JRuby, only Clojure seems to *need* a Java Interface
+        ;; Only Clojure seems to *need* a Java Interface to get generics right
         all-langs [:clj] ]
     (for [lang all-langs]
       (output-java-support-file full-class-name lang methods))))
 
 ;; ### Java equivalents for generated Clojure classes/functions ###
 
+;; TODO: Another example of where the file should be parsed line-by-line,
+;; not slurped in. This is part of the whole point of using Parsley for parsing.
 (defn output-java-file
   [full-class-name langs jall-source-file]
   (let [content (slurp jall-source-file)]

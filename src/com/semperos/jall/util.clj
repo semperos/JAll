@@ -26,6 +26,9 @@
   (let [offset (buffer-length buffer)]
     (p/edit buffer offset 0 content)))
 
+;; TODO: Parsing should be done incrementally (line-by-line),
+;; not via `slurp`ing the file. This is part of the whole reason
+;; for using Parsley to parse.
 (defn pbuffer-from-file
   "Given something file-able (see clojure.java.io/reader), return a *P*arsley *buffer* with the contents of that file and the `jall` parser."
   [parser f]
