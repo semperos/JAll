@@ -15,9 +15,9 @@
   "Return a seq of pairs, representing the starting and ending index (exclusive) that should be commented out."
   [file-content]
   (let [;; can't seem to get a proper negative lookahead working across lines here
-        import-matches (re-seq #"(?s)!import.*?\}\}" file-content)
-        helper-matches (re-seq #"(?s)!helpers?.*?\}\}" file-content)
-        def-matches (re-seq #"(?s)!def.*?\}\}" file-content)
+        import-matches (re-seq #"(?s)\$import.*?\}\}" file-content)
+        helper-matches (re-seq #"(?s)\$helpers?.*?\}\}" file-content)
+        def-matches (re-seq #"(?s)\$def.*?\}\}" file-content)
         matches (concat import-matches helper-matches def-matches)]
     (for [match matches]
       (let [idx-match (.indexOf file-content match)]
@@ -60,7 +60,7 @@
                 "(")))
 
 (defn replace-method-calls
-  "Find calls like `!clj_my-method-here(foo)` and replace them with the correct Java.
+  "Find calls like `$clj_my-method-here(foo)` and replace them with the correct Java.
 
    TODO: This should probably be handled using things we actually parse out, so we're not parsing all over the place in different ways."
   [file-content full-class-name]
@@ -68,9 +68,11 @@
         java-package (p/java-package parse-tree)
         java-imports (map p/java-import-class
                           (p/java-imports parse-tree)) 
-        method-sigs (re-seq #"(?s)!(clj|rb|sc)_([^\(]+)\(" file-content)]
+        method-sigs (re-seq #"(?s)\$(clj|rb|sc)_([^\(]+)\(" file-content)]
     (reduce (fn [state [whole lang method-name]]
-              (let [to-replace (str (apply str (butlast whole)) "\\(")]
+              (let [to-replace (str "\\" ;; because $ is a regex meta-character in need of escape
+                                    (apply str (butlast whole)) ;; because matching for `whole` above is easier when including the opening `(`
+                                    "\\(")]
                 (if (.contains method-name "/")
                   ;; if there's a slash, it means this is a fully-qualified reference to another class
                   (let [other-class (second (re-find #"([^/]+)/" method-name))

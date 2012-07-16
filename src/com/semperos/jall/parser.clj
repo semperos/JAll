@@ -64,16 +64,20 @@
                         ;; This 'bug' perhaps will be a feature for folks who
                         ;; might need to 'hide' Java import statements from JAll's
                         ;; logic.
-                        :expr- #{:java-package :java-import}
+                        :expr- #{:java-package :java-import :java-comment}
                         :java-package [:keywd-package #"[^;]+" #"(?s);?\s*"]
                         :keywd-package- #"^\s*package\s+"
                         :java-import [:keywd-import #"(?:static\s+)?[^;]+" #"(?s);?\s*"]
-                        :keywd-import- #"(?s)^import\s+")
+                        :keywd-import- #"(?s)^import\s+"
+;;                        :java-comment #"\s*/\*+.*?\*/\s*"
+                        :java-comment [:java-comment-start :java-comment-end]
+                        :java-comment-start- #"\s*/\*+"
+                        :java-comment-end- #"\s*\*/\s*")
       :clj (p/parser {:main :expr*
                       :root-tag :root}
                      :expr- #{:import-block :helper-block :code-block}
                      :import-block [:keywd-import :open-brackets :close-brackets]
-                     :keywd-import #"!import_(?:clj|clojure)"
+                     :keywd-import #"\$import_(?:clj|clojure)"
                      :open-brackets open-brackets
                      :close-brackets close-brackets
                      
@@ -81,7 +85,7 @@
                      :open-block- [:def-prelude :open-brackets]
                      
                      :def-prelude- [:keywd-def :def-name :def-args :def-return-type]
-                     :keywd-def #"!def_(?:clj|clojure)\s+"
+                     :keywd-def #"\$def_(?:clj|clojure)\s+"
                      
                      :def-name #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
                      
@@ -98,12 +102,12 @@
                      :class-name class-name
 
                      :helper-block [:keywd-helper :open-brackets :close-brackets]
-                     :keywd-helper #"!helpers?_(?:clj|clojure)")
+                     :keywd-helper #"\$helpers?_(?:clj|clojure)")
       :rb (p/parser {:main :expr*
                      :root-tag :root}
                     :expr- #{:import-block :helper-block :code-block}
                     :import-block [:keywd-import :open-brackets :close-brackets]
-                    :keywd-import #"!import_(?:rb|ruby|jruby)"
+                    :keywd-import #"\$import_(?:rb|ruby|jruby)"
                     :open-brackets open-brackets
                     :close-brackets close-brackets
                     
@@ -111,7 +115,7 @@
                     :open-block- [:def-prelude :open-brackets]
                     
                     :def-prelude- [:keywd-def :def-name :def-args :def-return-type]
-                    :keywd-def #"!def_(?:rb|ruby|jruby)\s+"
+                    :keywd-def #"\$def_(?:rb|ruby|jruby)\s+"
                     
                     :def-name #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
                     
@@ -128,12 +132,12 @@
                     :class-name class-name
                     
                     :helper-block [:keywd-helper :open-brackets :close-brackets]
-                    :keywd-helper #"!helpers?_(?:rb|ruby|jruby)")
+                    :keywd-helper #"\$helpers?_(?:rb|ruby|jruby)")
       :sc (p/parser {:main :expr*
                      :root-tag :root}
                     :expr- #{:import-block :helper-block :code-block}
                     :import-block [:keywd-import :open-brackets :close-brackets]
-                    :keywd-import #"!import_(?:sc|scala)"
+                    :keywd-import #"\$import_(?:sc|scala)"
                     :open-brackets open-brackets
                     :close-brackets close-brackets
                     
@@ -141,7 +145,7 @@
                     :open-block- [:def-prelude :open-brackets]
                     
                     :def-prelude- [:keywd-def :def-name :def-args :def-return-type]
-                    :keywd-def #"!def_(?:sc|scala)\s+"
+                    :keywd-def #"\$def_(?:sc|scala)\s+"
                     
                     :def-name #"[a-zA-Z_]+[a-zA-Z0-9_]*"
                     
@@ -158,8 +162,7 @@
                     :class-name class-name
                     
                     :helper-block [:keywd-helper :open-brackets :close-brackets]
-                    :keywd-helper #"!helpers?_(?:sc|scala)"))
-    ))
+                    :keywd-helper #"\$helpers?_(?:sc|scala)"))))
 
 (defn loose-parse
   "Parse, leave mess"
@@ -186,11 +189,16 @@
                            ;; take the contiguous legal nodes
                            (take-while (fn [node]
                                          (not= (:tag node) :net.cgrand.parsley/unexpected)))
+                           ;; Remove Java comments found at beginning of file
+                           (remove (fn [node]
+                                     (= (:tag node) :java-comment)))
                            ;; JAll doesn't have anything to do with static imports
                            (remove (fn [node]
-                                     (->> (:content node)
-                                          second
-                                          (re-find #"^static\s+")))))]
+                                     (and
+                                      (= (:tag node) :java-import)
+                                      (->> (:content node)
+                                           second
+                                           (re-find #"^static\s+"))))))]
     (assoc messy-tree :content legal-content)))
 
 (defn common-parse-str

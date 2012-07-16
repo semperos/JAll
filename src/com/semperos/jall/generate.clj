@@ -47,7 +47,7 @@
     (case lang
       :clj (init-file :clj
                       full-class-name
-                      ;; there should only be on !import statement per language per file
+                      ;; there should only be one `$import_` statement per language per file
                       (clj/output-file full-class-name right-import right-helpers right-methods))
       :rb (init-file :rb
                      full-class-name

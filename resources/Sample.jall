@@ -1,3 +1,8 @@
+/**
+ * This is a license notice.
+ * Parse this, too.
+ */
+
 package com.semperos;
 
 import java.util.List;
@@ -6,29 +11,29 @@ import java.util.ArrayList;
 
 import com.semperos.util.Wowza;
 
-!import_clj{{
+$import_clj{{
   (:require [clojure.string :as string])
 }}
-!import_rb{{
+$import_rb{{
   require 'nokogiri'
 }}
-!import_sc{{
+$import_sc{{
   import java.io.{FileInputStream, File}
 }}
 
-!helper_clj{{
+$helper_clj{{
   (defn try-me
     []
     (println "Clojure helper function"))
 }}
 
-!helper_rb{{
+$helper_rb{{
   def try_me
     puts "Ruby helper method"
   end
 }}
 
-!helper_sc{{
+$helper_sc{{
   def tryMe() {
     println("Scala helper method")
   }
@@ -37,33 +42,33 @@ import com.semperos.util.Wowza;
 public class Sample {
 
     public static void sayHelloToEveryoneLoudly(List<String> names, String punctuation) {
-        !def_clojure say-hello-to-everyone-loudly (arr-of-names : java.util.List<java.lang.String>, punctuation : String) : void {{
+        $def_clojure say-hello-to-everyone-loudly (arr-of-names : java.util.List<java.lang.String>, punctuation : String) : void {{
             (let [names (map #(string/upper-case %) arr-of-names)]
               (doseq [n names]
                 (println (str "Hello, " n punctuation))))
         }}
-        !clj_say-hello-to-everyone-loudly(names, "!!!");
-        !clj_Foo/should-be-same-package();
-        !clj_Wowza/should-be-com-semperos-util();
+        $clj_say-hello-to-everyone-loudly(names, "!!!");
+        $clj_Foo/should-be-same-package();
+        $clj_Wowza/should-be-com-semperos-util();
     }
 
     public static Integer squareThenDivideByTwo(Integer x) {
-        !def_ruby square_nums (x : Integer) : Integer {{
+        $def_ruby square_nums (x : Integer) : Integer {{
             x * x
         }}
-        Integer aSquare = !rb_square_nums(x);
+        Integer aSquare = $rb_square_nums(x);
         return aSquare / 2;
     }
 
     public static Integer timesEight(Integer x) {
-        !def_sc timesEight(x : Integer) : Integer {{
+        $def_sc timesEight(x : Integer) : Integer {{
           x * 8
         }}
-        Integer myNum = !sc_timesEight(x);
+        Integer myNum = $sc_timesEight(x);
         return myNum;
     }
 
-    !def_rb widget_xml() : void {{
+    $def_rb widget_xml() : void {{
         builder = Nokogiri::XML::Builder.new do |xml|
         xml.root {
           xml.products {
@@ -83,12 +88,12 @@ public class Sample {
         ns.add("Niles");
         ns.add("Frasier");
 
-        !clj_say-hello-to-everyone-loudly(ns, "!!!!!");
+        $clj_say-hello-to-everyone-loudly(ns, "!!!!!");
 
         Integer x = squareThenDivideByTwo(9);
         System.out.println("Your number is " + x);
 
         System.out.println("Printing widget XML...");
-        !rb_widget_xml();
+        $rb_widget_xml();
     }
 }
