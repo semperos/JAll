@@ -145,35 +145,35 @@
 
 ;; Method block nodes
 (scenario
- (given (blocks (clj-parse*))
+ (given (methods (clj-parse*))
    (expect
     count 1
     identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
 
 ;; Single method block node
 (scenario
- (given (first (blocks (clj-parse*)))
+ (given (first (methods (clj-parse*)))
    (expect
     identity net.cgrand.parsley.Node
-    block-lang :clj
-    block-method-name String
-    block-method-name not-empty
-    block-method-args clojure.lang.PersistentTreeMap
-    block-method-args not-empty
-    block-return-type String
-    block-return-type not-empty
-    #(first (-> % block-body read-string)) 'let
-    #(last (-> % block-body read-string)) '(doseq [n names] (println (str "Hello, " n punctuation))))))
+    method-lang :clj
+    method-name String
+    method-name not-empty
+    method-args clojure.lang.PersistentTreeMap
+    method-args not-empty
+    method-return-type String
+    method-return-type not-empty
+    #(first (-> % method-body read-string)) 'let
+    #(last (-> % method-body read-string)) '(doseq [n names] (println (str "Hello, " n punctuation))))))
 
 ;; Method records
 (scenario
- (given (blocks-as-methods (blocks (clj-parse*)))
+ (given (blocks-as-methods (methods (clj-parse*)))
    (expect
     identity (fn [mthds] (every? #(= (type %) com.semperos.jall.parser.Method) mthds)))))
 
 ;; Individual Method record
 (scenario
- (given (-> (clj-parse*) blocks blocks-as-methods first)
+ (given (-> (clj-parse*) methods blocks-as-methods first)
    (expect
     :lang :clj
     :name "say-hello-to-everyone-loudly"
@@ -231,34 +231,34 @@
 
 ;; Method block nodes
 (scenario
- (given (blocks (rb-parse*))
+ (given (methods (rb-parse*))
    (expect
     count 2
     identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
 
 ;; Single method block node
 (scenario
- (given (first (blocks (rb-parse*)))
+ (given (first (methods (rb-parse*)))
    (expect
     identity net.cgrand.parsley.Node
-    block-lang :rb
-    block-method-name String
-    block-method-name not-empty
-    block-method-args clojure.lang.PersistentTreeMap
-    block-method-args not-empty
-    block-return-type String
-    block-return-type not-empty
-    block-body #"x\s+\*\s+x")))
+    method-lang :rb
+    method-name String
+    method-name not-empty
+    method-args clojure.lang.PersistentTreeMap
+    method-args not-empty
+    method-return-type String
+    method-return-type not-empty
+    method-body #"x\s+\*\s+x")))
 
 ;; Method records
 (scenario
- (given (blocks-as-methods (blocks (rb-parse*)))
+ (given (blocks-as-methods (methods (rb-parse*)))
    (expect
     identity (fn [mthds] (every? #(= (type %) com.semperos.jall.parser.Method) mthds)))))
 
 ;; Individual Method record
 (scenario
- (given (-> (rb-parse*) blocks blocks-as-methods first)
+ (given (-> (rb-parse*) methods blocks-as-methods first)
    (expect
     :lang :rb
     :name "square_nums"
@@ -316,34 +316,34 @@
 
 ;; Method block nodes
 (scenario
- (given (blocks (sc-parse*))
+ (given (methods (sc-parse*))
    (expect
     count 1
     identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
 
 ;; Single method block node
 (scenario
- (given (first (blocks (sc-parse*)))
+ (given (first (methods (sc-parse*)))
    (expect
     identity net.cgrand.parsley.Node
-    block-lang :sc
-    block-method-name String
-    block-method-name not-empty
-    block-method-args clojure.lang.PersistentTreeMap
-    block-method-args not-empty
-    block-return-type String
-    block-return-type not-empty
-    block-body #"x\s+\*\s+\d+")))
+    method-lang :sc
+    method-name String
+    method-name not-empty
+    method-args clojure.lang.PersistentTreeMap
+    method-args not-empty
+    method-return-type String
+    method-return-type not-empty
+    method-body #"x\s+\*\s+\d+")))
 
 ;; Method records
 (scenario
- (given (blocks-as-methods (blocks (sc-parse*)))
+ (given (blocks-as-methods (methods (sc-parse*)))
    (expect
     identity (fn [mthds] (every? #(= (type %) com.semperos.jall.parser.Method) mthds)))))
 
 ;; Individual Method record
 (scenario
- (given (-> (sc-parse*) blocks blocks-as-methods first)
+ (given (-> (sc-parse*) methods blocks-as-methods first)
    (expect
     :lang :sc
     :name "timesEight"
