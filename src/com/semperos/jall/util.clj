@@ -46,6 +46,11 @@
                                               (= (:tag node) :net.cgrand.parsley/unexpected))
                                             original-contents)))))
 
+(defn tag=
+  "Function for easily filter by nodes with tags of a certain value"
+  [expected-tag actual-node]
+  (= (:tag actual-node) expected-tag))
+
 (defn class-name-from-file
   [file-name]
   (fs/name file-name))

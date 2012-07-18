@@ -23,6 +23,10 @@ $import_sc{{
   import java.io.{FileInputStream, File}
 }}
 
+$state_clj name-of-state {{
+  (ref {:foo "bar" :langs #{:clojure :jruby :scala}})
+}}
+
 $helper_clj{{
   (defn try-me
     []

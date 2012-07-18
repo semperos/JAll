@@ -49,8 +49,8 @@
         empty-parens "()"
         comma #",\s*"
         colon #"\s*:\s*"
-        open-brackets #"(?m)\{\{\s*$"
-        close-brackets #"(?m)^\s*\}\}"
+        open-brackets #"(?m)\s*\{\{\s*$"
+        close-brackets #"(?m)^\s*\}\}\s*$"
         method-args [:lparen :arg-type-list :rparen]
         arg-type-list #{"" :arg-type [:arg-type-list :comma :arg-type]}
         arg-type [:identifier :colon :class-name]]
@@ -76,34 +76,42 @@
                         :java-comment-end- #"\s*\*/\s*")
       :clj (p/parser {:main :expr*
                       :root-tag :root}
-                     :expr- #{:import-block :helper-block :method-block}
+                     :expr- #{:import-block :state-block :helper-block :method-block}
                      :import-block [:keywd-import :open-brackets :close-brackets]
                      :keywd-import #"\$import_(?:clj|clojure)"
                      :open-brackets open-brackets
                      :close-brackets close-brackets
-                     
+
+                     :state-block [:open-state :close-brackets]
+                     :open-state- [:state-prelude :open-brackets]
+                     :state-prelude- [:keywd-state :state-args]
+                     :keywd-state #"\$state_(?:clj|clojure)\s*"
+                     ;; Because Scala's is a little more complex
+                     :state-args :identifier
+
+                     :helper-block [:keywd-helper :open-brackets :close-brackets]
+                     :keywd-helper #"\$helpers?_(?:clj|clojure)"
+
                      :method-block [:open-method :close-brackets]
                      :open-method- [:method-prelude :open-brackets]
-                     
+
                      :method-prelude- [:keywd-def :method-name :method-args :method-return-type]
                      :keywd-def #"\$def_(?:clj|clojure)\s+"
-                     
+
                      :method-name #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*"
-                     
-                     :method-args method-args                     
+
+                     :method-args method-args
                      :lparen- lparen
                      :rparen- rparen
                      :arg-type-list- arg-type-list
                      :comma- comma
                      :arg-type- arg-type
                      :colon- colon
-                     :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
+                     ;; :identifier #"[a-zA-Z-\?!]+(?:(?!,\s*))*"
+                     :identifier #"[a-zA-Z!\?<>_-]+[a-zA-Z0-9!\?<>_-]*(?:(?!,\s*))*"
 
                      :method-return-type [#"\s*:\s*" :class-name #"\s*"]
-                     :class-name class-name
-
-                     :helper-block [:keywd-helper :open-brackets :close-brackets]
-                     :keywd-helper #"\$helpers?_(?:clj|clojure)")
+                     :class-name class-name)
       :rb (p/parser {:main :expr*
                      :root-tag :root}
                     :expr- #{:import-block :helper-block :method-block}
@@ -111,16 +119,16 @@
                     :keywd-import #"\$import_(?:rb|ruby|jruby)"
                     :open-brackets open-brackets
                     :close-brackets close-brackets
-                    
+
                     :method-block [:open-method :close-brackets]
                     :open-method- [:method-prelude :open-brackets]
-                    
+
                     :method-prelude- [:keywd-def :method-name :method-args :method-return-type]
                     :keywd-def #"\$def_(?:rb|ruby|jruby)\s+"
-                    
+
                     :method-name #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
-                    
-                    :method-args method-args                    
+
+                    :method-args method-args
                     :lparen- lparen
                     :rparen- rparen
                     :arg-type-list- arg-type-list
@@ -131,7 +139,7 @@
 
                     :method-return-type [#"\s*:\s*" :class-name #"\s*"]
                     :class-name class-name
-                    
+
                     :helper-block [:keywd-helper :open-brackets :close-brackets]
                     :keywd-helper #"\$helpers?_(?:rb|ruby|jruby)")
       :sc (p/parser {:main :expr*
@@ -141,15 +149,15 @@
                     :keywd-import #"\$import_(?:sc|scala)"
                     :open-brackets open-brackets
                     :close-brackets close-brackets
-                    
+
                     :method-block [:open-method :close-brackets]
                     :open-method- [:method-prelude :open-brackets]
-                    
+
                     :method-prelude- [:keywd-def :method-name :method-args :method-return-type]
                     :keywd-def #"\$def_(?:sc|scala)\s+"
-                    
+
                     :method-name #"[a-zA-Z_]+[a-zA-Z0-9_]*"
-                    
+
                     :method-args method-args
                     :lparen- lparen
                     :rparen- rparen
@@ -161,7 +169,7 @@
 
                     :method-return-type [#"\s*:\s*" :class-name #"\s*"]
                     :class-name class-name
-                    
+
                     :helper-block [:keywd-helper :open-brackets :close-brackets]
                     :keywd-helper #"\$helpers?_(?:sc|scala)"))))
 
@@ -255,7 +263,7 @@
   "Pull out the package of the file being parsed, used to create AJVM classes"
   [root-node]
   (let [content (:content root-node)
-        java-package-node (first (filter #(= (:tag %) :java-package) content))]
+        java-package-node (first (filter (partial u/tag= :java-package) content))]
     (-> java-package-node
         :content
         second)))
@@ -264,7 +272,7 @@
   "Pull out the top-level Java imports in the file"
   [root-node]
   (let [content (:content root-node)]
-    (filter #(= (:tag %) :java-import) content)))
+    (filter (partial u/tag= :java-import) content)))
 
 (defn java-import-class
   "Given a `java-import` node, extract the value of the class being imported"
@@ -277,19 +285,19 @@
   "Specialized JAll import for AJVM languages"
   [root-node]
   (let [contents (:content root-node)]
-    (filter (fn [node] (= (:tag node) :import-block)) contents)))
+    (filter (partial u/tag= :import-block) contents)))
 
 (defn import-lang
   [import-node]
   (let [contents (:content import-node)
-        keywd-node (first (filter (fn [node] (= (:tag node) :keywd-import)) contents))]
+        keywd-node (first (filter (partial u/tag= :keywd-import) contents))]
     (u/lang-legend (string/trim (second
                                  (re-find #"_([^_]+)$" (first (:content keywd-node))))))))
 
 (defn import-body
   [import-node]
   (let [contents (:content import-node)
-        ajvm-codes (filter #(= (:tag %) :net.cgrand.parsley/unexpected) contents)]
+        ajvm-codes (filter (partial u/tag= :net.cgrand.parsley/unexpected) contents)]
     (apply str (map #(-> % :content first) ajvm-codes))))
 
 (defn blocks-as-imports
@@ -299,23 +307,55 @@
     (init-import (import-lang import)
                  (import-body import))))
 
+(defn states
+  "All `:state-block` nodes from the tree"
+  [root-node]
+  (let [contents (:content root-node)]
+    (filter (partial u/tag= :state-block) contents)))
+
+(defn state-lang
+  [state-node]
+  (let [contents (:content state-node)
+        keywd-node (first (filter (partial u/tag= :keywd-state) contents))]
+    (u/lang-legend (string/trim (second
+                                 (re-find #"_([^_]+)$" (first (:content keywd-node))))))))
+
+(defn state-name
+  [state-node]
+  (let [args-node (first (filter (partial u/tag= :state-args) (:content state-node)))
+        id-node (first (filter (partial u/tag= :identifier) (:content args-node)))]
+    (first (:content id-node))))
+
+(defn state-type
+  "For Scala, we have to supply the type as well."
+  [state-node]
+  (when (= (state-lang state-node) :sc)
+    ;; TODO: when we have Scala parse output to work with, write this
+    "String"))
+
+(defn state-body
+  [state-node]
+  (let [contents (:content state-node)
+        ajvm-codes (filter (partial u/tag= :net.cgrand.parsley/unexpected) contents)]
+    (apply str (map #(-> % :content first) ajvm-codes))))
+
 (defn helpers
   "Specialized JAll helper for AJVM languages"
   [root-node]
   (let [contents (:content root-node)]
-    (filter (fn [node] (= (:tag node) :helper-block)) contents)))
+    (filter (partial u/tag= :helper-block) contents)))
 
 (defn helper-lang
   [helper-node]
   (let [contents (:content helper-node)
-        keywd-node (first (filter (fn [node] (= (:tag node) :keywd-helper)) contents))]
+        keywd-node (first (filter (partial u/tag= :keywd-helper) contents))]
     (u/lang-legend (string/trim (second
                                  (re-find #"_([^_]+)$" (first (:content keywd-node))))))))
 
 (defn helper-body
   [helper-node]
   (let [contents (:content helper-node)
-        ajvm-codes (filter #(= (:tag %) :net.cgrand.parsley/unexpected) contents)]
+        ajvm-codes (filter (partial u/tag= :net.cgrand.parsley/unexpected) contents)]
     (apply str (map #(-> % :content first) ajvm-codes))))
 
 (defn blocks-as-helpers
@@ -329,7 +369,7 @@
   "Given root parse-tree node, return all code blocks"
   [root-node]
   (let [contents (:content root-node)
-        method-blocks (filter (fn [node] (= (:tag node) :method-block)) contents)]
+        method-blocks (filter (partial u/tag= :method-block) contents)]
     (remove (fn [block]
               (= (:tag (second (:content block)))
                  :net.cgrand.parsley/unexpected))
@@ -341,7 +381,7 @@
    In order to make the parser unambiguous, we have to hard-code a language-specific path at some point. This is that point, which is why the below code looks ugly."
   [node]
   (let [content (:content node)
-        keywd-node (first (filter (fn [node] (= (:tag node) :keywd-def)) content))]
+        keywd-node (first (filter (partial u/tag= :keywd-def) content))]
     (u/lang-legend (string/trim (second
                                  (re-find #"_([^_]+)$" (first (:content keywd-node))))))))
 
@@ -349,14 +389,14 @@
   "Return name of method for code block"
   [node]
   (let [content (:content node)
-        method-name-node (first (filter #(= (:tag %) :method-name) content))]
+        method-name-node (first (filter (partial u/tag= :method-name) content))]
     (-> method-name-node :content first)))
 
 (defn method-args
   "Get the args for the code block's method"
   [node]
   (let [content (:content node)
-        method-args-node (first (filter #(= (:tag %) :method-args) content))]
+        method-args-node (first (filter (partial u/tag= :method-args) content))]
     (apply sorted-map (map #(-> % :content first) (u/clean-syntactic-cruft method-args-node)))))
 
 (defn method-return-type
@@ -364,7 +404,7 @@
   [node]
   (let [lang (method-lang node)
         content (:content node)
-        return-type-node (first (filter #(= (:tag %) :method-return-type) content))
+        return-type-node (first (filter (partial u/tag= :method-return-type) content))
         return-type (-> (u/clean-syntactic-cruft return-type-node)
                         first
                         :content
@@ -376,7 +416,7 @@
   [node]
   {:pre [(= (:tag (last (:content node))) :close-brackets)]}
   (let [content (:content node)
-        ajvm-codes (filter #(= (:tag %) :net.cgrand.parsley/unexpected) content)]
+        ajvm-codes (filter (partial u/tag= :net.cgrand.parsley/unexpected) content)]
     (apply str (map #(-> % :content first) ajvm-codes))))
 
 (defn blocks-as-methods

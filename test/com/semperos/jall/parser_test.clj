@@ -121,6 +121,26 @@
     identity (fn [impts] (every? #(= (type %) com.semperos.jall.parser.Import) impts)) 
     count 1)))
 
+;; State block nodes
+(scenario
+ (given (states (clj-parse*))
+   (expect
+    count 1
+    identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
+
+;; Single method block node
+(scenario
+ (given (first (states (clj-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    state-lang :clj
+    state-name String
+    state-name not-empty
+    state-name "name-of-state"
+    state-type nil
+    #(first (-> % state-body read-string)) 'ref
+    #(last (-> % state-body read-string)) '{:foo "bar" :langs #{:clojure :jruby :scala}})))
+
 ;; Helper nodes
 (scenario
  (given (helpers (clj-parse*))
