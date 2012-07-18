@@ -3,7 +3,9 @@
  * Parse this, too.
  */
 
-package com.semperos;
+// Don't forget one-line comments either
+
+package com.semperos;//inline comments too
 
 import java.util.List;
 import static java.lang.Math.*;

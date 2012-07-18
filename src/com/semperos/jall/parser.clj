@@ -68,9 +68,9 @@
                         :java-package [:keywd-package #"[^;]+" #"(?s);?\s*"]
                         :keywd-package- #"^\s*package\s+"
                         :java-import [:keywd-import #"(?:static\s+)?[^;]+" #"(?s);?\s*"]
-                        :keywd-import- #"(?s)^import\s+"
-;;                        :java-comment #"\s*/\*+.*?\*/\s*"
-                        :java-comment [:java-comment-start :java-comment-end]
+                        :keywd-import- #"(?s)^\s*import\s+"
+                        :java-comment #{:java-line-comment [:java-comment-start :java-comment-end]}
+                        :java-line-comment- #"//.*"
                         :java-comment-start- #"\s*/\*+"
                         :java-comment-end- #"\s*\*/\s*")
       :clj (p/parser {:main :expr*
