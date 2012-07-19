@@ -1,5 +1,7 @@
 # JAll
 
+**WORK IN PROGRESS**
+
 JAll is a powerful set of tools for writing Clojure, JRuby or Scala *inside your Java source code* cleanly and easily.
 
 ## Components
