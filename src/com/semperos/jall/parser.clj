@@ -52,7 +52,10 @@
 (defn parser
   "Return parser for given lang"
   [lang]
-  (let [class-name      #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*"
+  (let [;; shameless
+        class-name      #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*"
+        ;; equally shameless
+        scala-class-name #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:\[[a-zA-Z]+[a-zA-Z0-9_\.]*(?:\[[a-zA-Z]+[a-zA-Z0-9_\.]*\])*\])*"
         lparen          #"\(\s*"
         rparen          #"\)\s*"
         empty-parens    "()"
@@ -170,7 +173,7 @@
                     :open-state- [:state-prelude :open-brackets]
                     :state-prelude- [:keywd-state :state-args]
                     :keywd-state #"\$state_(?:sc|scala)\s*"
-                    :state-args [:identifier :colon :class-name]
+                    :state-args [:identifier :colon :scala-class-name]
 
                     :method-block [:open-method :close-brackets]
                     :open-method- [:method-prelude :open-brackets]
@@ -191,6 +194,7 @@
 
                     :method-return-type [#"\s*:\s*" :class-name #"\s*"]
                     :class-name class-name
+                    :scala-class-name scala-class-name
 
                     :helper-block [:keywd-helper :open-brackets :close-brackets]
                     :keywd-helper #"\$helpers?_(?:sc|scala)"))))
@@ -355,7 +359,7 @@
     (let [contents (:content state-node)
           state-args-node (first (filter (partial u/tag= :state-args) contents))
           type-node (first
-                     (filter (partial u/tag= :class-name)
+                     (filter (partial u/tag= :scala-class-name)
                              (:content state-args-node)))]
       (first (:content type-node)))))
 

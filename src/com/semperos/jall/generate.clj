@@ -55,7 +55,7 @@
                      (rb/output-file full-class-name right-import right-state right-helpers right-methods))
       :sc (init-file :sc
                      full-class-name
-                     (sc/output-file full-class-name right-import right-helpers right-methods)))))
+                     (sc/output-file full-class-name right-import right-state right-helpers right-methods)))))
 
 (defn output-ajvm-files
   "Given all the method definitions found in the JAll source document, call the appropriate function for transforming method def's for each language"

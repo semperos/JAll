@@ -36,16 +36,13 @@
 
 (defn rb-class-ctor
   [state]
-  (if (:body state)
+  (when (:body state)
     ;; default ctor with state handling
     (let [name (:name state)
           value (string/trim (:body state))]
       ["  def initialize"
        (format "    @%s = %s" name value)
-       "  end"])
-    ;; for now, just an empty ctor
-    ["  def initialize"
-     "  end"]))
+       "  end"])))
 
 (defn rb-class-helpers
   "Helpers represent non-Java-facing methods that can be used by official JAll methods. They can really be anything; they are simply Ruby source inserted at the top of the class definition before the regular JAll methods are added."

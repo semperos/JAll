@@ -128,7 +128,7 @@
     count 1
     identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
 
-;; Single method block node
+;; Single state block node
 (scenario
  (given (first (states (clj-parse*)))
    (expect
@@ -234,7 +234,7 @@
     count 1
     identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
 
-;; Single method block node
+;; Single state block node
 (scenario
  (given (first (states (rb-parse*)))
    (expect
@@ -244,7 +244,7 @@
     state-name not-empty
     state-name "name_of_state"
     state-type nil
-    state-body #":clojure :jruby :scala")))
+    state-body #":clojure, :jruby, :scala")))
 
 ;; Helper nodes
 (scenario
@@ -338,7 +338,7 @@
     count 1
     identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
 
-;; Single method block node
+;; Single state block node
 (scenario
  (given (first (states (sc-parse*)))
    (expect

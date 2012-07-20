@@ -25,10 +25,21 @@
     [""]))
 
 (defn sc-class-start
-  [full-class-name]
+  [full-class-name state]
   (let [package (u/package-from-class-name full-class-name)
         klass (str (u/class-from-class-name full-class-name) "Sc")]
-    [(format "class %s {\n" klass)]))
+    (if (:body state)
+      (let [state-name (:name state)
+            state-type (:type state)]
+        [(format "case class %s(%s : %s) {\n" klass state-name state-type)])
+      [(format "case class %s {\n" klass)])))
+
+(defn sc-class-ctor
+  [state]
+  (when (:body state)
+    ;; default nullary ctor with state handling
+    (let [value (string/trim (:body state))]
+      [(format "  def this() = this(%s)" value)])))
 
 (defn sc-class-helpers
   "Helpers represent non-Java-facing methods that can be used by official JAll methods. They can really be anything; they are simply Ruby source inserted at the top of the class definition before the regular JAll methods are added."
@@ -59,18 +70,20 @@
   ["}\n"])
 
 (defn sc-file
-  [full-class-name import helpers methods]
-  (flatten
-   (concat (sc-package full-class-name)
-           (sc-prelude import)
-           (sc-class-start full-class-name)
-           (sc-class-helpers helpers)
-           (sc-class-methods methods)
-           (sc-class-end))))
+  [full-class-name import state helpers methods]
+  (remove nil?
+          (flatten
+           (concat (sc-package full-class-name)
+                   (sc-prelude import)
+                   (sc-class-start full-class-name state)
+                   (sc-class-ctor state)
+                   (sc-class-helpers helpers)
+                   (sc-class-methods methods)
+                   (sc-class-end)))))
 
 (defn output-file
-  [full-class-name import helpers methods]
-  (let [pieces (sc-file full-class-name import helpers methods)]
+  [full-class-name import state helpers methods]
+  (let [pieces (sc-file full-class-name import state helpers methods)]
     (string/join "\n"
                  (for [piece pieces]
                    (str (with-out-str (print piece)))))))
