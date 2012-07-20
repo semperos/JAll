@@ -11,19 +11,32 @@
             [com.semperos.jall.parser :as p]
             [clojure.string :as string]))
 
+(defn re-positions [re s]
+  "Return positions for all matches found for `re` against `s`, including start and end.
+
+Credits to Brian Carper for initial code: http://stackoverflow.com/questions/3262195/compact-clojure-code-for-regular-expression-matches-and-their-position-in-string"
+        (loop [m (re-matcher re s)
+               res []]
+          (if (.find m)
+            (recur m (conj res [(.start m) (.end m)]))
+            res)))
+
 (defn comment-out-positions
-  "Return a seq of pairs, representing the starting and ending index (exclusive) that should be commented out."
+  "Return a seq of pairs, representing the starting and ending index (exclusive) that should be commented out.
+
+   This is another instance where the parser should be used, with buffer editing, not adhoc regexes."
   [file-content]
-  (let [;; can't seem to get a proper negative lookahead working across lines here
-        import-matches (re-seq #"(?s)\$import.*?\}\}" file-content)
-        helper-matches (re-seq #"(?s)\$helpers?.*?\}\}" file-content)
-        def-matches (re-seq #"(?s)\$def.*?\}\}" file-content)
-        matches (concat import-matches helper-matches def-matches)]
-    (for [match matches]
-      (let [idx-match (.indexOf file-content match)]
-        [idx-match
-         ;; Plus 2 to account for the two brackets
-         (+ 2 (.indexOf file-content "}}" idx-match))]))))
+  (let [import-matches  (re-positions #"(?ms)\$import.*?^\s*\}\}"    file-content)
+        state-matches   (re-positions #"(?ms)\$state.*?^\}\}"        file-content)
+        helper-matches  (re-positions #"(?ms)\$helpers?.*?^\s*\}\}"  file-content)
+        def-matches     (re-positions #"(?ms)\$def.*?^\s*\}\}"       file-content)]
+    (concat import-matches state-matches helper-matches def-matches)
+    ;; (for [match matches]
+    ;;   (let [idx-match (.indexOf file-content match)]
+    ;;     [idx-match
+    ;;      ;; Plus 2 to account for the two brackets
+    ;;      (+ 2 (.indexOf file-content "}}" idx-match))]))
+    ))
 
 (defn comment-out-regions
   "Given a seq of pairs with begin/end indices for commenting out in a Java file, return the final, concatenated strings with those regions commented out."
@@ -36,8 +49,8 @@
                            initial-sub (.substring old-output 0 real-start)
                            inner-sub   (.substring old-output real-start real-end)
                            post-sub    (.substring old-output real-end)
-                           start-comment "\n/*\n"
-                           end-comment "\n*/\n"
+                           start-comment "/*\n"
+                           end-comment "\n*/"
                            this-delta (count (str start-comment end-comment))]
                        {:output (str initial-sub start-comment inner-sub end-comment post-sub)
                         :delta (+ old-delta this-delta)}))

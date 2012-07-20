@@ -12,6 +12,7 @@
             [clojure.string :as string]))
 
 (def clj-method-prefix "java-")
+(def clj-ctor-name "init")
 
 (defn clj-method-sigs
   "The method signatures in :gen-class"
@@ -24,23 +25,36 @@
 
 (defn clj-gen-class
   "The class name is set explicitly to `full-class-name` plus a language-specific suffix."
-  [full-class-name methods]
+  [full-class-name state methods]
   (list :gen-class
         :name (symbol (u/translate-class-name :clj full-class-name))
+        :init (symbol clj-ctor-name)
         :constructors {[] []}
+        :state (symbol (get state :name "state"))
         :implements [(symbol (u/translate-interface-name :clj full-class-name))]
         :prefix clj-method-prefix))
 
 (defn clj-ns
-  [full-class-name import methods]
+  [full-class-name import state methods]
   (let [klass (symbol (u/translate-class-name :clj full-class-name))
-        import-body (:body import)]
-    (if import-body
-      (list 'ns klass
-            (read-string import-body)
-            (clj-gen-class full-class-name methods))
-      (list 'ns klass
-            (clj-gen-class full-class-name methods)))))
+        import-body (if (:body import)
+                      (read-string (:body import))
+                      nil)]
+    (remove nil?
+     (list 'ns klass
+           import-body
+           (clj-gen-class full-class-name state methods)))))
+
+(defn clj-ctor
+  "Define a constructor for our Java-facing class defined by `:gen-class`"
+  [state]
+  (let [body (if (:body state)
+               (read-string (:body state))
+               nil)]
+    (list 'defn
+          (symbol (str clj-method-prefix clj-ctor-name))
+          []
+          [[] body])))
 
 (defn clj-helpers
   "A helper is a JAll block of possibly multiple function definitions.
@@ -61,19 +75,20 @@
     (concat starting-defn body-code)))
 
 (defn clj-file
-  [full-class-name import helpers methods]
-  (let [starting-state [(clj-ns full-class-name import methods)]
-        state-with-helpers (reduce (fn [state helper-forms]
-                                     (concat state (clj-helpers helper-forms)))
-                                   starting-state
+  [full-class-name import state helpers methods]
+  (let [starting-code [(clj-ns full-class-name import state methods)
+                       (clj-ctor state)]
+        code-with-helpers (reduce (fn [code helper-forms]
+                                     (concat code (clj-helpers helper-forms)))
+                                   starting-code
                                    helpers)]
     (reduce (fn [state method]
-              (concat state [(clj-defn method)])) state-with-helpers methods)))
+              (concat state [(clj-defn method)])) code-with-helpers methods)))
 
 (defn output-file
   "Output a string of the to-be file contents of the given Clojure source file."
-  [full-class-name import helpers methods]
-  (let [pieces (clj-file full-class-name import helpers methods)]
+  [full-class-name import state helpers methods]
+  (let [pieces (clj-file full-class-name import state helpers methods)]
     (string/join "\n"
                  (for [piece pieces]
                    (str (with-out-str (pprint piece)))))))

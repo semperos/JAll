@@ -51,6 +51,11 @@
   [expected-tag actual-node]
   (= (:tag actual-node) expected-tag))
 
+(defn lang=
+  "Function for easily filter by nodes with `:lang` of a certain value"
+  [expected-lang actual-node]
+  (= (:lang actual-node) expected-lang))
+
 (defn class-name-from-file
   [file-name]
   (fs/name file-name))

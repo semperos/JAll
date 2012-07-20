@@ -13,6 +13,30 @@
             [com.semperos.jall.util :as u]
             [clojure.string :as string]))
 
+(defrecord Import [lang body])
+
+(defn init-import
+  ([] (init-import nil nil))
+  ([lang] (init-import lang nil))
+  ([lang body] (Import. lang body)))
+
+(defrecord State [lang name type body])
+
+(defn init-state
+  "Initialize a new `State` record"
+  ([] (init-state nil nil nil nil))
+  ([lang] (init-state lang nil nil nil))
+  ([lang name] (init-state lang name nil nil))
+  ([lang name type] (init-state lang name type nil))
+  ([lang name type body] (State. lang name type body)))
+
+(defrecord Helper [lang body])
+
+(defn init-helper
+  ([] (init-helper nil nil))
+  ([lang] (init-helper lang nil))
+  ([lang body] (Helper. lang body)))
+
 (defrecord Method [lang name args return-type body])
 
 (defn init-method
@@ -24,33 +48,18 @@
   ([lang name args return-type] (init-method lang name args return-type nil))
   ([lang name args return-type body] (Method. lang name args return-type body)))
 
-(defrecord Import [lang body])
-
-(defn init-import
-  ([] (init-import nil nil))
-  ([lang] (init-import lang nil))
-  ([lang body] (Import. lang body)))
-
-(defrecord Helper [lang body])
-
-(defn init-helper
-  ([] (init-helper nil nil))
-  ([lang] (init-helper lang nil))
-  ([lang body] (Helper. lang body)))
-
 ;; Main parser
 (defn parser
   "Return parser for given lang"
   [lang]
-  (let [class-name #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*"
-        java-type #"[A-Za-z]+[a-zA-Z0-9_\.]*"
-        lparen #"\(\s*"
-        rparen #"\)\s*"
-        empty-parens "()"
-        comma #",\s*"
-        colon #"\s*:\s*"
-        open-brackets #"(?m)\s*\{\{\s*$"
-        close-brackets #"(?m)^\s*\}\}\s*$"
+  (let [class-name      #"[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*(?:<[a-zA-Z]+[a-zA-Z0-9_\.]*>)*>)*"
+        lparen          #"\(\s*"
+        rparen          #"\)\s*"
+        empty-parens    "()"
+        comma           #",\s*"
+        colon           #"\s*:\s*"
+        open-brackets   #"(?m)\s*\{\{\s*$"
+        close-brackets  #"(?m)^\s*\}\}\s*$"
         method-args [:lparen :arg-type-list :rparen]
         arg-type-list #{"" :arg-type [:arg-type-list :comma :arg-type]}
         arg-type [:identifier :colon :class-name]]
@@ -114,12 +123,22 @@
                      :class-name class-name)
       :rb (p/parser {:main :expr*
                      :root-tag :root}
-                    :expr- #{:import-block :helper-block :method-block}
+                    :expr- #{:import-block :state-block :helper-block :method-block}
                     :import-block [:keywd-import :open-brackets :close-brackets]
                     :keywd-import #"\$import_(?:rb|ruby|jruby)"
                     :open-brackets open-brackets
                     :close-brackets close-brackets
 
+                    :state-block [:open-state :close-brackets]
+                    :open-state- [:state-prelude :open-brackets]
+                    :state-prelude- [:keywd-state :state-args]
+                    :keywd-state #"\$state_(?:rb|ruby|jruby)\s*"
+                    ;; Because Scala's is a little more complex
+                    :state-args :identifier
+
+                    :helper-block [:keywd-helper :open-brackets :close-brackets]
+                    :keywd-helper #"\$helpers?_(?:rb|ruby|jruby)"
+                    
                     :method-block [:open-method :close-brackets]
                     :open-method- [:method-prelude :open-brackets]
 
@@ -138,17 +157,20 @@
                     :identifier #"[a-zA-Z_]+[a-zA-Z0-9!\?_]*"
 
                     :method-return-type [#"\s*:\s*" :class-name #"\s*"]
-                    :class-name class-name
-
-                    :helper-block [:keywd-helper :open-brackets :close-brackets]
-                    :keywd-helper #"\$helpers?_(?:rb|ruby|jruby)")
+                    :class-name class-name)
       :sc (p/parser {:main :expr*
                      :root-tag :root}
-                    :expr- #{:import-block :helper-block :method-block}
+                    :expr- #{:import-block :state-block :helper-block :method-block}
                     :import-block [:keywd-import :open-brackets :close-brackets]
                     :keywd-import #"\$import_(?:sc|scala)"
                     :open-brackets open-brackets
                     :close-brackets close-brackets
+
+                    :state-block [:open-state :close-brackets]
+                    :open-state- [:state-prelude :open-brackets]
+                    :state-prelude- [:keywd-state :state-args]
+                    :keywd-state #"\$state_(?:sc|scala)\s*"
+                    :state-args [:identifier :colon :class-name]
 
                     :method-block [:open-method :close-brackets]
                     :open-method- [:method-prelude :open-brackets]
@@ -330,14 +352,27 @@
   "For Scala, we have to supply the type as well."
   [state-node]
   (when (= (state-lang state-node) :sc)
-    ;; TODO: when we have Scala parse output to work with, write this
-    "String"))
+    (let [contents (:content state-node)
+          state-args-node (first (filter (partial u/tag= :state-args) contents))
+          type-node (first
+                     (filter (partial u/tag= :class-name)
+                             (:content state-args-node)))]
+      (first (:content type-node)))))
 
 (defn state-body
   [state-node]
   (let [contents (:content state-node)
         ajvm-codes (filter (partial u/tag= :net.cgrand.parsley/unexpected) contents)]
     (apply str (map #(-> % :content first) ajvm-codes))))
+
+(defn blocks-as-states
+  "Create `State` records out of :state-block blocks"
+  [states]
+  (for [state states]
+    (init-state (state-lang state)
+                (state-name state)
+                (state-type state)
+                (state-body state))))
 
 (defn helpers
   "Specialized JAll helper for AJVM languages"

@@ -40,15 +40,16 @@
 
 (defn output-file
   "Intermediate fn for output-ajvm-files for dispatching on value of lang"
-  [full-class-name lang imports helpers methods]
-  (let [right-import (first (filter (fn [item] (= (:lang item) lang)) imports))
-        right-helpers (filter (fn [item] (= (:lang item) lang)) helpers)
-        right-methods (filter (fn [item] (= (:lang item) lang)) methods)]
+  [full-class-name lang imports states helpers methods]
+  (let [right-import (first (filter (partial u/lang= lang) imports))
+        right-state (first (filter (partial u/lang= lang) states))
+        right-helpers (filter (partial u/lang= lang) helpers)
+        right-methods (filter (partial u/lang= lang) methods)]
+    ;; TODO: opportunity for multi-method here
     (case lang
       :clj (init-file :clj
                       full-class-name
-                      ;; there should only be one `$import_` statement per language per file
-                      (clj/output-file full-class-name right-import right-helpers right-methods))
+                      (clj/output-file full-class-name right-import right-state right-helpers right-methods))
       :rb (init-file :rb
                      full-class-name
                      (rb/output-file full-class-name right-import right-helpers right-methods))
@@ -58,14 +59,14 @@
 
 (defn output-ajvm-files
   "Given all the method definitions found in the JAll source document, call the appropriate function for transforming method def's for each language"
-  [full-class-name imports helpers methods]
+  [full-class-name imports states helpers methods]
   ;; all-langs based on method definitions, so unused imports aren't included per-language
   (let [all-langs (reduce (fn [state item]
                             (conj state (:lang item)))
                           #{}
                           methods)]
     (for [lang all-langs]
-      (output-file full-class-name lang imports helpers methods))))
+      (output-file full-class-name lang imports states helpers methods))))
 
 (defn output-support-for-clj-file
   [full-class-name methods]

@@ -21,16 +21,23 @@ $import_rb{{
 }}
 $import_sc{{
   import java.io.{FileInputStream, File}
+  import scala.collection.immutable.List
 }}
 
 $state_clj name-of-state {{
   (ref {:foo "bar" :langs #{:clojure :jruby :scala}})
 }}
+$state_rb name_of_state {{
+  {:foo "bar" :langs [:clojure :jruby :scala]})
+}}
+$state_sc nameOfState : scala.collection.immutable.List {{
+  List("clojure", "jruby", "scala")
+}}
 
 $helper_clj{{
   (defn try-me
     []
-    (println "Clojure helper function"))
+    (println ("Clojure helper function with (:foo state) of " (:foo @(.state name-of-state)))))
 }}
 
 $helper_rb{{
