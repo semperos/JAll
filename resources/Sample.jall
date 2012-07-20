@@ -63,6 +63,8 @@ public class Sample {
         $clj_say-hello-to-everyone-loudly(names, "!!!");
         $clj_Foo/should-be-same-package();
         $clj_Wowza/should-be-com-semperos-util();
+        $clj_class foo = new $clj_class();
+        foo.sayHelloToEveryoneLoudly();
     }
 
     public static Integer squareThenDivideByTwo(Integer x) {
@@ -70,6 +72,8 @@ public class Sample {
             x * x
         }}
         Integer aSquare = $rb_square_nums(x);
+        $rb_class foo = new $rb_class();
+        foo.tryMe();
         return aSquare / 2;
     }
 

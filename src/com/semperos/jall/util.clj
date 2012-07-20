@@ -104,7 +104,7 @@
 
 (defn translate-class-name
   "AJVM classes have a suffix appended to make things easier to recognize in generated Java code."
-  [lang full-class-name]
+  [full-class-name lang]
   (case (keyword lang)
     :clj (str full-class-name "Clj")
     :rb  (str full-class-name "Rb")
@@ -113,8 +113,8 @@
 
 (defn translate-interface-name
   "AJVM classes implement an auto-generated Java interface with the same methods to ensure typing."
-  [lang full-class-name]
-  (let [full-name (translate-class-name lang full-class-name)
+  [full-class-name lang]
+  (let [full-name (translate-class-name full-class-name lang)
         parts (string/split full-name #"\.")
         package-portion (butlast parts)
         class-portion (last parts)
@@ -123,7 +123,7 @@
 
 (defn translate-method-name
   "Given a target language and method name, generate the Java class/method that would result"
-  [lang method-name]
+  [method-name lang]
   (case (keyword lang)
     :clj (dashes-to-camel-case method-name)
     :rb (snake-case-to-camel-case method-name)

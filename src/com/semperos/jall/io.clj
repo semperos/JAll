@@ -41,7 +41,7 @@
   [file-record]
   (let [lang (:lang file-record)
         ext (lang-extension lang)
-        file (u/translate-class-name lang (second (re-find #"\.([^\.]+)$" (:class-name file-record))))]
+        file (u/translate-class-name (second (re-find #"\.([^\.]+)$" (:class-name file-record))) lang)]
     (str file ext)))
 
 (defn necessary-src-dirs

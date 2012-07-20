@@ -62,20 +62,31 @@ Credits to Brian Carper for initial code: http://stackoverflow.com/questions/326
   (let [positions (comment-out-positions file-content)]
     (comment-out-regions file-content positions)))
 
+(defn transform-class-calls
+  "Transform things like `$clj_class` to `com.example.FooClj`"
+  [file-content full-class-name]
+  (let [class-calls (re-seq #"\$(clj|rb|sc)_class" file-content)]
+    (reduce (fn [state [whole lang]]
+              (let [to-replace (str "\\" ;; because $ is a regex meta-character in need of escape
+                                    whole)]
+                (.replaceAll state to-replace (u/translate-class-name full-class-name lang))))
+            file-content
+            class-calls)))
+
 (defn transform-method-call
   [state to-replace lang class-name method-name]
   (.replaceAll state to-replace
                (str
                 "new "
-                (u/translate-class-name lang class-name)
+                (u/translate-class-name class-name lang)
                 "()."
-                (u/translate-method-name lang method-name)
+                (u/translate-method-name method-name lang)
                 "(")))
 
-(defn replace-method-calls
+(defn transform-method-calls
   "Find calls like `$clj_my-method-here(foo)` and replace them with the correct Java.
 
-   TODO: This should probably be handled using things we actually parse out, so we're not parsing all over the place in different ways."
+   TODO: This should probably be handled using things we actually parse out, so we're not parsing all over the place in different ways (here with regexes...)."
   [file-content full-class-name]
   (let [parse-tree (p/adhoc-parse (p/parser :common) file-content)
         java-package (p/java-package parse-tree)
@@ -117,10 +128,17 @@ Credits to Brian Carper for initial code: http://stackoverflow.com/questions/326
 (defn add-ajvm-imports
   "Given the full class name of the current file and all AJVM languages used, add the necessary import statements to the final Java file"
   [content full-class-name langs]
-  (let [imports (reduce (fn [state item]
-                          (conj state (str "import " (u/translate-class-name item full-class-name) ";")))
+  (let [imports (reduce (fn [state lang]
+                          (conj state (str "import " (u/translate-class-name full-class-name lang) ";")))
                         []
                         langs)
         imports-str (string/join "\n" imports)]
     (.replaceFirst content "(?s)\n\\s*import" (str "\n\n" imports-str "\n\nimport"))))
 
+(defn transform-java-source
+  [file-content full-class-name langs]
+  (-> file-content
+      (comment-out-method-definitions)
+      (transform-class-calls full-class-name)
+      (transform-method-calls full-class-name)
+      (add-ajvm-imports full-class-name langs)))

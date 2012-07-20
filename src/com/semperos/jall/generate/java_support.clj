@@ -17,7 +17,7 @@
 
 (defn java-interface-decl
   [full-class-name lang]
-  (let [interface-name (last (string/split (u/translate-interface-name lang full-class-name) #"\."))]
+  (let [interface-name (last (string/split (u/translate-interface-name full-class-name lang) #"\."))]
     (format "public interface %s {" interface-name)))
 
 (defn java-interface-methods

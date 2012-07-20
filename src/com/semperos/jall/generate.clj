@@ -79,7 +79,7 @@
   (let [right-methods (filter (fn [item] (= (:lang item) lang)) methods)]
     (case lang
       :clj (init-file :java
-                      (u/translate-interface-name :clj full-class-name)
+                      (u/translate-interface-name full-class-name :clj)
                       (output-support-for-clj-file full-class-name right-methods)
                       true ;; support-interface?
                       ))))
@@ -102,10 +102,7 @@
 ;; not slurped in. This is part of the whole point of using Parsley for parsing.
 (defn output-java-file
   [full-class-name langs jall-source-file]
-  (let [content (slurp jall-source-file)]
+  (let [file-content (slurp jall-source-file)]
     (init-file :java
                full-class-name
-               (-> content
-                   (j/comment-out-method-definitions)
-                   (j/replace-method-calls full-class-name)
-                   (j/add-ajvm-imports full-class-name langs)))))
+               (j/transform-java-source file-content full-class-name langs))))

@@ -21,22 +21,22 @@
    (for [{:keys [name args return-type]} methods]
      (let [genericless-args (into {} (for [[k v] args]
                                        [k (second (re-find #"([^<]+)<?" v))]))]
-       [(symbol (u/translate-method-name :clj name)) (vec (map symbol (vals genericless-args))) (symbol return-type)]))))
+       [(symbol (u/translate-method-name name :clj)) (vec (map symbol (vals genericless-args))) (symbol return-type)]))))
 
 (defn clj-gen-class
   "The class name is set explicitly to `full-class-name` plus a language-specific suffix."
   [full-class-name state methods]
   (list :gen-class
-        :name (symbol (u/translate-class-name :clj full-class-name))
+        :name (symbol (u/translate-class-name full-class-name :clj))
         :init (symbol clj-ctor-name)
         :constructors {[] []}
         :state (symbol (get state :name "state"))
-        :implements [(symbol (u/translate-interface-name :clj full-class-name))]
+        :implements [(symbol (u/translate-interface-name full-class-name :clj))]
         :prefix clj-method-prefix))
 
 (defn clj-ns
   [full-class-name import state methods]
-  (let [klass (symbol (u/translate-class-name :clj full-class-name))
+  (let [klass (symbol (u/translate-class-name full-class-name :clj))
         import-body (if (:body import)
                       (read-string (:body import))
                       nil)]
@@ -70,7 +70,7 @@
   (let [wrapped-body (str "(" body ")")
         body-code (read-string wrapped-body)
         starting-defn (list 'defn
-                            (symbol (str clj-method-prefix (u/translate-method-name :clj name)))
+                            (symbol (str clj-method-prefix (u/translate-method-name name :clj)))
                             (vec (map symbol (concat ['this] (keys args)))))]
     (concat starting-defn body-code)))
 
