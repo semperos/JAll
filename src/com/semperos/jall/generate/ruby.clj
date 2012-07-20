@@ -24,11 +24,25 @@
       starting-code)))
 
 (defn rb-class-start
-  [full-class-name]
+  [full-class-name state]
   (let [package (u/package-from-class-name full-class-name)
-        klass (str (u/class-from-class-name full-class-name) "Rb")]
+        klass (str (u/class-from-class-name full-class-name) "Rb")
+        state-name (if (:name state)
+                     (format "  attr_accessor :%s\n" (:name state))
+                     nil)]
     [(format "java_package '%s'" package)
-     (format "class %s\n" klass)]))
+     (format "class %s" klass)
+     state-name]))
+
+(defn rb-class-ctor
+  [state]
+  (when (:body state)
+    ;; default ctor with state handling
+    (let [name (:name state)
+          value (string/trim (:body state))]
+      ["  def initialize"
+       (format "    @%s = %s" name value)
+       "  end"])))
 
 (defn rb-class-helpers
   "Helpers represent non-Java-facing methods that can be used by official JAll methods. They can really be anything; they are simply Ruby source inserted at the top of the class definition before the regular JAll methods are added."
@@ -56,17 +70,19 @@
   ["end\n"])
 
 (defn rb-file
-  [full-class-name import helpers methods]
-  (flatten
-   (concat (rb-prelude import)
-           (rb-class-start full-class-name)
-           (rb-class-helpers helpers)
-           (rb-class-methods methods)
-           (rb-class-end))))
+  [full-class-name import state helpers methods]
+  (remove nil?
+          (flatten
+           (concat (rb-prelude import)
+                   (rb-class-start full-class-name state)
+                   (rb-class-ctor state)
+                   (rb-class-helpers helpers)
+                   (rb-class-methods methods)
+                   (rb-class-end)))))
 
 (defn output-file
-  [full-class-name import helpers methods]
-  (let [pieces (rb-file full-class-name import helpers methods)]
+  [full-class-name import state helpers methods]
+  (let [pieces (rb-file full-class-name import state helpers methods)]
     (string/join "\n"
                  (for [piece pieces]
                    (str (with-out-str (print piece)))))))

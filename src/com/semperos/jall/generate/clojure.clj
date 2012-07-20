@@ -12,6 +12,7 @@
             [clojure.string :as string]))
 
 (def clj-method-prefix "java-")
+(def clj-ctor-name "init")
 
 (defn clj-method-sigs
   "The method signatures in :gen-class"
@@ -20,27 +21,40 @@
    (for [{:keys [name args return-type]} methods]
      (let [genericless-args (into {} (for [[k v] args]
                                        [k (second (re-find #"([^<]+)<?" v))]))]
-       [(symbol (u/translate-method-name :clj name)) (vec (map symbol (vals genericless-args))) (symbol return-type)]))))
+       [(symbol (u/translate-method-name name :clj)) (vec (map symbol (vals genericless-args))) (symbol return-type)]))))
 
 (defn clj-gen-class
   "The class name is set explicitly to `full-class-name` plus a language-specific suffix."
-  [full-class-name methods]
+  [full-class-name state methods]
   (list :gen-class
-        :name (symbol (u/translate-class-name :clj full-class-name))
+        :name (symbol (u/translate-class-name full-class-name :clj))
+        :init (symbol clj-ctor-name)
         :constructors {[] []}
-        :implements [(symbol (u/translate-interface-name :clj full-class-name))]
+        :state (symbol (get state :name "state"))
+        :implements [(symbol (u/translate-interface-name full-class-name :clj))]
         :prefix clj-method-prefix))
 
 (defn clj-ns
-  [full-class-name import methods]
-  (let [klass (symbol (u/translate-class-name :clj full-class-name))
-        import-body (:body import)]
-    (if import-body
-      (list 'ns klass
-            (read-string import-body)
-            (clj-gen-class full-class-name methods))
-      (list 'ns klass
-            (clj-gen-class full-class-name methods)))))
+  [full-class-name import state methods]
+  (let [klass (symbol (u/translate-class-name full-class-name :clj))
+        import-body (if (:body import)
+                      (read-string (:body import))
+                      nil)]
+    (remove nil?
+     (list 'ns klass
+           import-body
+           (clj-gen-class full-class-name state methods)))))
+
+(defn clj-ctor
+  "Define a constructor for our Java-facing class defined by `:gen-class`"
+  [state]
+  (let [body (if (:body state)
+               (read-string (:body state))
+               nil)]
+    (list 'defn
+          (symbol (str clj-method-prefix clj-ctor-name))
+          []
+          [[] body])))
 
 (defn clj-helpers
   "A helper is a JAll block of possibly multiple function definitions.
@@ -56,24 +70,25 @@
   (let [wrapped-body (str "(" body ")")
         body-code (read-string wrapped-body)
         starting-defn (list 'defn
-                            (symbol (str clj-method-prefix (u/translate-method-name :clj name)))
+                            (symbol (str clj-method-prefix (u/translate-method-name name :clj)))
                             (vec (map symbol (concat ['this] (keys args)))))]
     (concat starting-defn body-code)))
 
 (defn clj-file
-  [full-class-name import helpers methods]
-  (let [starting-state [(clj-ns full-class-name import methods)]
-        state-with-helpers (reduce (fn [state helper-forms]
-                                     (concat state (clj-helpers helper-forms)))
-                                   starting-state
+  [full-class-name import state helpers methods]
+  (let [starting-code [(clj-ns full-class-name import state methods)
+                       (clj-ctor state)]
+        code-with-helpers (reduce (fn [code helper-forms]
+                                     (concat code (clj-helpers helper-forms)))
+                                   starting-code
                                    helpers)]
     (reduce (fn [state method]
-              (concat state [(clj-defn method)])) state-with-helpers methods)))
+              (concat state [(clj-defn method)])) code-with-helpers methods)))
 
 (defn output-file
   "Output a string of the to-be file contents of the given Clojure source file."
-  [full-class-name import helpers methods]
-  (let [pieces (clj-file full-class-name import helpers methods)]
+  [full-class-name import state helpers methods]
+  (let [pieces (clj-file full-class-name import state helpers methods)]
     (string/join "\n"
                  (for [piece pieces]
                    (str (with-out-str (pprint piece)))))))

@@ -21,6 +21,17 @@ $import_rb{{
 }}
 $import_sc{{
   import java.io.{FileInputStream, File}
+  import scala.collection.immutable.List
+}}
+
+$state_clj nameOfState {{
+  (ref {:foo "bar" :langs #{:clojure :jruby :scala}})
+}}
+$state_rb name_of_state {{
+  {:foo => "bar",  :langs => [:clojure, :jruby, :scala]}
+}}
+$state_sc nameOfState : scala.collection.immutable.List {{
+  List("clojure", "jruby", "scala")
 }}
 
 $helper_clj{{
@@ -52,6 +63,8 @@ public class Sample {
         $clj_say-hello-to-everyone-loudly(names, "!!!");
         $clj_Foo/should-be-same-package();
         $clj_Wowza/should-be-com-semperos-util();
+        $clj_class foo = new $clj_class();
+        foo.sayHelloToEveryoneLoudly();
     }
 
     public static Integer squareThenDivideByTwo(Integer x) {
@@ -59,6 +72,8 @@ public class Sample {
             x * x
         }}
         Integer aSquare = $rb_square_nums(x);
+        $rb_class foo = new $rb_class();
+        foo.tryMe();
         return aSquare / 2;
     }
 

@@ -21,7 +21,7 @@
   (let [package (p/java-package parse-tree)
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)
-        methods (p/blocks-as-methods (p/blocks parse-tree))]
+        methods (p/blocks-as-methods (p/methods parse-tree))]
     (gen/output-java-support-files full-class-name methods)))
 
 (defn produce-ajvm-files
@@ -31,9 +31,10 @@
         class-name (u/class-name-from-file source-file)
         full-class-name (str package "." class-name)
         imports (p/blocks-as-imports (p/imports parse-tree))
+        states  (p/blocks-as-states  (p/states parse-tree))
         helpers (p/blocks-as-helpers (p/helpers parse-tree))
-        methods (p/blocks-as-methods (p/blocks parse-tree))]
-    (gen/output-ajvm-files full-class-name imports helpers methods)))
+        methods (p/blocks-as-methods (p/methods parse-tree))]
+    (gen/output-ajvm-files full-class-name imports states helpers methods)))
 
 (defn reproduce-java-file
   "Transform JAll snippets in original source, returning a `File` record representing the new Java source code transformed"

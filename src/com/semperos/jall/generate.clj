@@ -40,32 +40,33 @@
 
 (defn output-file
   "Intermediate fn for output-ajvm-files for dispatching on value of lang"
-  [full-class-name lang imports helpers methods]
-  (let [right-import (first (filter (fn [item] (= (:lang item) lang)) imports))
-        right-helpers (filter (fn [item] (= (:lang item) lang)) helpers)
-        right-methods (filter (fn [item] (= (:lang item) lang)) methods)]
+  [full-class-name lang imports states helpers methods]
+  (let [right-import (first (filter (partial u/lang= lang) imports))
+        right-state (first (filter (partial u/lang= lang) states))
+        right-helpers (filter (partial u/lang= lang) helpers)
+        right-methods (filter (partial u/lang= lang) methods)]
+    ;; TODO: opportunity for multi-method here
     (case lang
       :clj (init-file :clj
                       full-class-name
-                      ;; there should only be one `$import_` statement per language per file
-                      (clj/output-file full-class-name right-import right-helpers right-methods))
+                      (clj/output-file full-class-name right-import right-state right-helpers right-methods))
       :rb (init-file :rb
                      full-class-name
-                     (rb/output-file full-class-name right-import right-helpers right-methods))
+                     (rb/output-file full-class-name right-import right-state right-helpers right-methods))
       :sc (init-file :sc
                      full-class-name
-                     (sc/output-file full-class-name right-import right-helpers right-methods)))))
+                     (sc/output-file full-class-name right-import right-state right-helpers right-methods)))))
 
 (defn output-ajvm-files
   "Given all the method definitions found in the JAll source document, call the appropriate function for transforming method def's for each language"
-  [full-class-name imports helpers methods]
+  [full-class-name imports states helpers methods]
   ;; all-langs based on method definitions, so unused imports aren't included per-language
   (let [all-langs (reduce (fn [state item]
                             (conj state (:lang item)))
                           #{}
                           methods)]
     (for [lang all-langs]
-      (output-file full-class-name lang imports helpers methods))))
+      (output-file full-class-name lang imports states helpers methods))))
 
 (defn output-support-for-clj-file
   [full-class-name methods]
@@ -78,7 +79,7 @@
   (let [right-methods (filter (fn [item] (= (:lang item) lang)) methods)]
     (case lang
       :clj (init-file :java
-                      (u/translate-interface-name :clj full-class-name)
+                      (u/translate-interface-name full-class-name :clj)
                       (output-support-for-clj-file full-class-name right-methods)
                       true ;; support-interface?
                       ))))
@@ -101,10 +102,7 @@
 ;; not slurped in. This is part of the whole point of using Parsley for parsing.
 (defn output-java-file
   [full-class-name langs jall-source-file]
-  (let [content (slurp jall-source-file)]
+  (let [file-content (slurp jall-source-file)]
     (init-file :java
                full-class-name
-               (-> content
-                   (j/comment-out-method-definitions)
-                   (j/replace-method-calls full-class-name)
-                   (j/add-ajvm-imports full-class-name langs)))))
+               (j/transform-java-source file-content full-class-name langs))))
