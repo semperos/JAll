@@ -52,7 +52,7 @@
                       (clj/output-file full-class-name right-import right-state right-helpers right-methods))
       :rb (init-file :rb
                      full-class-name
-                     (rb/output-file full-class-name right-import right-helpers right-methods))
+                     (rb/output-file full-class-name right-import right-state right-helpers right-methods))
       :sc (init-file :sc
                      full-class-name
                      (sc/output-file full-class-name right-import right-helpers right-methods)))))

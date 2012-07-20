@@ -28,7 +28,7 @@ $state_clj nameOfState {{
   (ref {:foo "bar" :langs #{:clojure :jruby :scala}})
 }}
 $state_rb name_of_state {{
-  {:foo "bar" :langs [:clojure :jruby :scala]}
+  {:foo => "bar",  :langs => [:clojure, :jruby, :scala]}
 }}
 $state_sc nameOfState : scala.collection.immutable.List {{
   List("clojure", "jruby", "scala")
