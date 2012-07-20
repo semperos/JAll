@@ -136,7 +136,7 @@
     state-lang :clj
     state-name String
     state-name not-empty
-    state-name "name-of-state"
+    state-name "nameOfState"
     state-type nil
     #(first (-> % state-body read-string)) 'ref
     #(last (-> % state-body read-string)) '{:foo "bar" :langs #{:clojure :jruby :scala}})))
@@ -227,6 +227,25 @@
     count 1
     identity (fn [impts] (every? #(= (type %) com.semperos.jall.parser.Import) impts)))))
 
+;; State block nodes
+(scenario
+ (given (states (rb-parse*))
+   (expect
+    count 1
+    identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
+
+;; Single method block node
+(scenario
+ (given (first (states (rb-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    state-lang :rb
+    state-name String
+    state-name not-empty
+    state-name "name_of_state"
+    state-type nil
+    state-body #":clojure :jruby :scala")))
+
 ;; Helper nodes
 (scenario
  (given (helpers (rb-parse*))
@@ -311,6 +330,25 @@
    (expect
     count 1
     identity (fn [impts] (every? #(= (type %) com.semperos.jall.parser.Import) impts)))))
+
+;; State block nodes
+(scenario
+ (given (states (sc-parse*))
+   (expect
+    count 1
+    identity (fn [blks] (every? #(= (type %) net.cgrand.parsley.Node) blks)))))
+
+;; Single method block node
+(scenario
+ (given (first (states (sc-parse*)))
+   (expect
+    identity net.cgrand.parsley.Node
+    state-lang :sc
+    state-name String
+    state-name not-empty
+    state-name "nameOfState"
+    state-type "scala.collection.immutable.List"
+    state-body #"List.*?scala")))
 
 ;; Helper nodes
 (scenario

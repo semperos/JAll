@@ -24,11 +24,11 @@ $import_sc{{
   import scala.collection.immutable.List
 }}
 
-$state_clj name-of-state {{
+$state_clj nameOfState {{
   (ref {:foo "bar" :langs #{:clojure :jruby :scala}})
 }}
 $state_rb name_of_state {{
-  {:foo "bar" :langs [:clojure :jruby :scala]})
+  {:foo "bar" :langs [:clojure :jruby :scala]}
 }}
 $state_sc nameOfState : scala.collection.immutable.List {{
   List("clojure", "jruby", "scala")
@@ -37,7 +37,7 @@ $state_sc nameOfState : scala.collection.immutable.List {{
 $helper_clj{{
   (defn try-me
     []
-    (println ("Clojure helper function with (:foo state) of " (:foo @(.state name-of-state)))))
+    (println "Clojure helper function"))
 }}
 
 $helper_rb{{
